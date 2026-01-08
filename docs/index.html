@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="es">
+<!--
+  ==================== Pool Control Application ====================
+  Smart Pool Control Dashboard - Main HTML Document
+  
+  Features:
+  - Responsive mobile-first design (max-width: 28rem)
+  - MQTT-based real-time control and monitoring
+  - Pump control with visual feedback
+  - Dual valve modes (Cascada/Eyectores)
+  - Timer functionality with countdown display
+  - Program scheduling (up to 3 programs)
+  - WiFi and MQTT connection status indicators
+  - Event logging with expand/collapse UI
+  
+  Technology Stack:
+  - Tailwind CSS 3.x (CDN with custom config)
+  - Material Icons Round (Google Fonts)
+  - MQTT.js 5.x (WebSocket Secure)
+  - Vanilla JavaScript (ES6+ modules)
+  
+  Structure:
+  - Main Screen: Primary controls and status
+  - Timer Screen: Countdown timer configuration
+  - Programas Screen: Schedule management
+  - Create Program Screen: Weekly schedule editor
+-->
+<head>
+  <!-- ==================== Meta Tags ==================== -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💧 Smart Pool</title>
+  
+  <!-- ==================== External Stylesheets ==================== -->
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+  
+  <!-- ==================== Tailwind CSS Configuration ==================== -->
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#001A72",
+            "primary-hover": "#001054",
+            "primary-light": "#2B7EC5",
+          },
+          fontFamily: {
+            sans: ["Quicksand", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "12px",
+            'xl': "16px",
+            '2xl': "24px",
+            '3xl': "32px",
+          },
+        },
+      },
+    };
+  </script>
+  
+  <!-- ==================== Custom Styles ==================== -->
+  <style>
+    /* Scrollbar styling for log container */
+    .log-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .log-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .log-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #94a3b8;
+      border-radius: 20px;
+    }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    /* Timer mode button selected state */
+    .timer-mode-btn.selected {
+      background-color: #001A72 !important;
+      border-color: #001A72 !important;
+      color: white !important;
+    }
+    .timer-mode-btn.selected span {
+      color: white !important;
+    }
+    .timer-mode-btn.selected img {
+      filter: brightness(0) saturate(100%) invert(100%) !important;
+    }
+    .timer-mode-btn.selected svg {
+      color: white !important;
+    }
+    /* Loading Spinner Animation */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .ble-spinner {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.95);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ble-spinner.active {
+      display: flex;
+    }
+    .spinner-circle {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #001A72;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    /* Center icons in mode buttons */
+    .mode-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Screen transitions */
+    #main-screen, #timer-screen {
+      transition: transform 0.3s ease-in-out;
+    }
+    #main-screen.slide-left {
+      transform: translateX(-100%);
+    }
+    #timer-screen.slide-in {
+      transform: translateX(0);
+    }
+    /* Number input styling */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+      height: 40px;
+    }
+    /* Active day toggle button */
+    .day-toggle.active {
+      background-color: #001A72 !important;
+      border-color: #001A72 !important;
+      color: white !important;
+    }
+    /* Active mode button */
+    .mode-btn.active {
+      background-color: #001A72 !important;
+      border-color: #001A72 !important;
+    }
+    .mode-btn.active img {
+      filter: invert(1) brightness(2) !important;
+    }
+    .mode-btn.active span {
+      color: white !important;
+    }
+    /* Wave animation for temperature circle */
+    @keyframes wave {
+      0% { transform: translateX(0) translateZ(0) scaleY(1); }
+      50% { transform: translateX(-25%) translateZ(0) scaleY(0.95); }
+      100% { transform: translateX(-50%) translateZ(0) scaleY(1); }
+    }
+    .wave-shape {
+      position: absolute;
+      top: 45%; 
+      left: 0;
+      width: 200%;
+      height: 200%;
+      background-color: rgba(14, 165, 233, 0.25);
+      border-radius: 38%;
+      animation: wave 11s infinite linear;
+      z-index: 1;
+    }
+    .wave-shape:nth-child(2) {
+      top: 47%;
+      background-color: rgba(2, 132, 199, 0.35);
+      animation: wave 8s infinite linear reverse; 
+      z-index: 2;
+    }
+    .wave-shape:nth-child(3) {
+      top: 50%;
+      background-color: #001A72;
+      animation: wave 5s infinite linear;
+      z-index: 3;
+    }
+    .circle-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 9999px;
+      mask-image: radial-gradient(white, black);
+      -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+    /* Static wave shapes for temperature rectangle */
+    .wave-shape-rect {
+      position: absolute;
+      bottom: -6%;
+      left: -50%;
+      width: 200%;
+      height: 78%;
+      background: url('data:image/svg+xml,<svg viewBox="0 0 1000 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="grad" x1="0%25" y1="0%25" x2="0%25" y2="100%25"><stop offset="0%25" style="stop-color:rgba(14,165,233,0.3);stop-opacity:1" /><stop offset="100%25" style="stop-color:rgba(59,130,246,0.4);stop-opacity:1" /></linearGradient></defs><path d="M0,35 Q250,5 500,35 T1000,35 L1000,100 L0,100 Z" fill="url(%23grad)"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      background-size: 200% 120%;
+      z-index: 1;
+    }
+    .wave-shape-rect:nth-child(2) {
+      bottom: -6%;
+      left: -40%;
+      width: 180%;
+      height: 88%;
+      background: url('data:image/svg+xml,<svg viewBox="0 0 1000 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="grad2" x1="0%25" y1="0%25" x2="0%25" y2="100%25"><stop offset="0%25" style="stop-color:rgba(2,132,199,0.4);stop-opacity:1" /><stop offset="100%25" style="stop-color:rgba(59,130,246,0.55);stop-opacity:1" /></linearGradient></defs><path d="M0,45 Q250,12 500,45 T1000,45 L1000,100 L0,100 Z" fill="url(%23grad2)"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      background-size: 180% 125%;
+      z-index: 2;
+    }
+    .wave-shape-rect:nth-child(3) {
+      bottom: -8%;
+      left: -30%;
+      width: 160%;
+      height: 95%;
+      background: url('data:image/svg+xml,<svg viewBox="0 0 1000 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="grad3" x1="0%25" y1="0%25" x2="0%25" y2="100%25"><stop offset="0%25" style="stop-color:rgba(3,102,214,0.5);stop-opacity:1" /><stop offset="100%25" style="stop-color:rgba(0,26,114,0.7);stop-opacity:1" /></linearGradient></defs><path d="M0,55 Q250,18 500,55 T1000,55 L1000,100 L0,100 Z" fill="url(%23grad3)"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      background-size: 160% 130%;
+      z-index: 3;
+    }
+  </style>
+</head>
+
+<!-- ==================== Application Body ==================== -->
+<body class="bg-slate-100 text-slate-900 font-sans flex justify-center items-stretch min-h-screen p-2 md:p-4 transition-colors duration-300">
+  
+  <!-- ==================== Main Container ==================== -->
+  <main class="w-full max-w-sm bg-white rounded-3xl shadow-xl border-2 border-slate-300 overflow-hidden relative flex flex-col min-h-[calc(100vh-1rem)] md:min-h-[calc(100vh-2rem)]">
+    
+    <!-- ==================== Header Section ==================== -->
+    <header class="pt-2 pb-2 px-6 text-center border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+      <div class="flex items-center justify-center gap-3">
+        <button id="btn-back" class="absolute left-4 p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-all opacity-0 pointer-events-none">
+          <span class="material-icons-round text-2xl">arrow_back</span>
+        </button>
+        <h1 class="text-3xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
+          <img src="logo.png" alt="Logo" class="h-12">
+          <span id="header-title" class="text-center leading-tight text-2xl">Smart Pool</span>
+        </h1>
+      </div>
+    </header>
+
+    <!-- ==================== Main Screen ==================== -->
+    <!-- Primary dashboard with pump/valve controls, status indicators, and event log -->
+    <div id="main-screen" class="px-6 py-1.5 space-y-6 flex-1 overflow-y-auto transition-transform duration-300">
+      
+      <!-- Temperature Display -->
+      <div class="relative w-full bg-gradient-to-b from-orange-200 via-orange-100 to-transparent rounded-3xl border-2 border-white shadow-lg overflow-hidden" style="height: 170px;">
+        <!-- Static wave shapes for water effect -->
+        <div class="wave-shape-rect"></div>
+        <div class="wave-shape-rect"></div>
+        <div class="wave-shape-rect"></div>
+        
+        <!-- Air Temperature (top right) -->
+        <div class="absolute top-4 right-6 z-10 flex items-center gap-2">
+          <span id="weather-icon" class="material-icons-round text-2xl text-orange-600">wb_sunny</span>
+          <span id="weather-temp" class="text-3xl font-black text-slate-800 tracking-tight leading-none">--</span>
+        </div>
+        
+        <!-- Water Temperature (bottom left) -->
+        <div class="absolute bottom-4 left-6 z-10 flex items-center gap-2">
+          <span id="temp-icon" class="material-icons-round text-2xl text-slate-100">water_drop</span>
+          <span id="temp-value" class="text-3xl font-black text-slate-100 drop-shadow-md tracking-tight leading-none">--</span>
+        </div>
+      </div>
+
+      <!-- ========== Login Card ========== -->
+      <!-- MQTT broker authentication -->
+      <div id="login-card" class="bg-slate-50 rounded-2xl border-2 border-slate-300 p-5 space-y-4">
+        <div class="flex items-center gap-3 text-slate-700 font-bold">
+          <span class="material-icons-round text-2xl">key</span>
+          Credenciales MQTT
+        </div>
+        
+        <div class="space-y-3">
+          <div class="relative">
+            <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">person</span>
+            <input 
+              id="mqtt-user" 
+              type="text"
+              placeholder="User-dashboard-01" 
+              autocomplete="username"
+              class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium"
+            />
+          </div>
+          
+          <div class="relative">
+            <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
+            <input 
+              id="mqtt-pass" 
+              type="password"
+              placeholder="Password" 
+              autocomplete="current-password"
+              class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium"
+            />
+          </div>
+        </div>
+        
+        <button 
+          id="btn-connect"
+          class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-[0.98] shadow-lg">
+          Conectar
+        </button>
+      </div>
+
+      <!-- ========== Control Buttons ========== -->
+      <div class="space-y-4">
+        <!-- Manual Controls Container -->
+        <div class="w-full bg-white rounded-2xl border-2 border-slate-300 p-5 shadow-sm space-y-4">
+          <!-- Pump Toggle -->
+          <!-- Row 1: Pump Icon, Label, and Pump Toggle -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div class="flex items-center gap-4 flex-1">
+              <!-- Pump Icon -->
+              <img id="pump-icon" src="power-icon.png" alt="Power" class="w-10 h-10 transition-all duration-200">
+              <!-- Pump Label -->
+              <div class="font-bold text-slate-900 text-[1.7rem]">Bomba</div>
+            </div>
+            <!-- Pump Toggle (Vertical, small) -->
+            <button 
+              id="btn-pump"
+              disabled
+              class="relative inline-flex h-10 w-20 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed bg-slate-300 mr-2">
+              <span id="pump-toggle-dot" class="absolute inline-block h-8 w-8 rounded-full bg-white shadow-lg transition-all duration-200 left-1 top-1"></span>
+            </button>
+          </div>
+
+          <!-- Mode sliders (mutually exclusive) -->
+          <div class="space-y-4">
+            <!-- Cascada row -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img id="waterfall-icon" src="waterfall-icon.png" alt="Cascada" class="w-8 h-8 transition-all duration-200 opacity-50">
+                <span id="waterfall-label" class="text-[1.3rem] font-semibold text-slate-900 transition-all duration-200 opacity-50">Cascada</span>
+              </div>
+              <button 
+                id="btn-valve-cascada"
+                disabled
+                class="relative inline-flex h-10 w-20 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed bg-slate-300 mr-2">
+                <span id="valve-cascada-dot" class="absolute inline-block h-8 w-8 rounded-full bg-white shadow-lg transition-all duration-200 left-1 top-1"></span>
+              </button>
+            </div>
+
+            <!-- Eyectores row -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img id="waterjet-icon" src="waterjet-icon.png" alt="Eyectores" class="w-8 h-8 transition-all duration-200 opacity-50">
+                <span id="waterjet-label" class="text-[1.3rem] font-semibold text-slate-900 transition-all duration-200 opacity-50">Eyectores</span>
+              </div>
+              <button 
+                id="btn-valve-eyectores"
+                disabled
+                class="relative inline-flex h-10 w-20 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed bg-slate-300 mr-2">
+                <span id="valve-eyectores-dot" class="absolute inline-block h-8 w-8 rounded-full bg-white shadow-lg transition-all duration-200 left-1 top-1"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timer and Programas Buttons -->
+        <!-- Navigation to secondary screens -->
+        <div class="grid grid-cols-2 gap-3">
+          <button 
+            id="btn-timer"
+            class="bg-white hover:bg-slate-50 text-slate-900 font-bold text-base py-6 px-4 rounded-2xl border-2 border-slate-300 shadow-sm transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-2">
+            <span class="material-icons-round text-3xl">timer</span>
+            <span>Timer</span>
+          </button>
+          
+          <button 
+            id="btn-programas"
+            class="bg-white hover:bg-slate-50 text-slate-900 font-bold text-base py-6 px-4 rounded-2xl border-2 border-slate-300 shadow-sm transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-2">
+            <span class="material-icons-round text-3xl">calendar_month</span>
+            <span>Programas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="border-t border-slate-200"></div>
+
+      <!-- ========== Connection Status Indicators ========== -->
+      <div class="space-y-2">
+        <!-- WiFi Status (signal strength with color-coded icons) -->
+        <div id="wifi-status" class="p-3 bg-slate-100 rounded-xl border border-slate-300 flex items-center justify-between min-h-[52px]">
+          <div class="flex items-center gap-2">
+            <span id="wifi-icon" class="material-icons-round text-slate-400 text-lg">wifi_off</span>
+            <span id="wifi-ssid" class="text-xs font-bold text-slate-700">Sin WiFi</span>
+          </div>
+          <span class="px-2 py-0.5 rounded-md bg-white border border-slate-300 text-[10px] font-bold font-mono text-slate-600">
+            WiFi
+          </span>
+        </div>
+
+        <!-- Add Device Button (BLE Provisioning) -->
+        <button id="add-device-btn" onclick="provisionNewDevice()" class="w-full p-3 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold rounded-xl border border-slate-300 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+          <span class="material-icons-round text-slate-700 text-lg">add_circle</span>
+          <span class="text-sm font-semibold text-slate-900">Configurar conexión WiFi</span>
+        </button>
+
+        <!-- BLE Provisioning Modal (hidden by default) -->
+        <div id="provision-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+          <div class="bg-white rounded-2xl p-6 max-w-sm w-11/12 shadow-2xl max-h-[90vh] overflow-y-auto" style="position: relative;">
+            <!-- Loading Spinner Overlay -->
+            <div id="ble-spinner" class="ble-spinner">
+              <div class="spinner-circle"></div>
+              <div id="spinner-text" class="text-sm font-semibold text-primary">Procesando...</div>
+            </div>
+            <div class="space-y-3">
+              <!-- Scan Networks Button -->
+              <button type="button" id="scan-networks-btn" class="w-full px-3 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2">
+                <span class="material-icons-round text-sm">wifi_tethering</span>
+                Buscar dispositivo y redes
+              </button>
+
+              <!-- Networks List (hidden initially) -->
+              <div id="networks-list" class="hidden bg-slate-50 rounded-lg border border-slate-200 max-h-48 overflow-y-auto">
+                <div id="networks-loading" class="p-3 text-center text-xs text-slate-600">Buscando redes...</div>
+                <div id="networks-container" class="space-y-1 p-2"></div>
+              </div>
+
+              <!-- Hidden SSID field (populated by network selection) -->
+              <input type="hidden" id="provision-ssid" />
+              
+              <!-- Password Input -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Contraseña WiFi</label>
+                <input type="password" id="provision-password" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Selecciona una red primero" autocomplete="off" disabled />
+              </div>
+              <div id="provision-status" class="text-xs text-blue-600 hidden"></div>
+              <div class="flex gap-2 mt-4">
+                <button type="button" id="cancel-btn" class="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-sm font-semibold transition-colors">Cancelar</button>
+                <button type="button" id="connect-btn" class="flex-1 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-semibold transition-colors">Conectar</button>
+              </div>
+              
+              <!-- Instructions Toggle Button -->
+              <button type="button" id="instructions-btn" class="w-full px-3 py-1.5 mt-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1">
+                <span class="material-icons-round text-sm">info</span>
+                <span id="instructions-btn-text">Instrucciones</span>
+              </button>
+              
+              <!-- Instructions Panel (hidden by default) -->
+              <div id="instructions-panel" class="hidden mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 class="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                  <span class="material-icons-round text-lg">touch_app</span>
+                  Pasos para configurar WiFi
+                </h3>
+                <ol class="space-y-2 text-xs text-blue-900">
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">1.</span>
+                    <span>Hacé clic en <strong>"Buscar dispositivo y redes"</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">2.</span>
+                    <span>El navegador solicitará permisos de Bluetooth - <strong>aceptalos</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">3.</span>
+                    <span>En el diálogo, seleccioná <strong>"Controlador Smart Pool"</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">4.</span>
+                    <span>Esperá a que aparezcan las redes WiFi disponibles</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">5.</span>
+                    <span>Hacé clic en <strong>tu red WiFi</strong> de la lista</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">6.</span>
+                    <span>Ingresá la <strong>contraseña de tu red</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-bold text-blue-600 mt-0.5">7.</span>
+                    <span>Hacé clic en <strong>"Conectar"</strong> y esperá confirmación</span>
+                  </li>
+                </ol>
+                <div class="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-800">
+                  <strong>💡 Tip:</strong> Mantené el controlador cerca durante la configuración (~3 metros)
+                </div>
+              </div>
+              
+              <button type="button" id="unpair-btn" class="w-full px-3 py-1.5 mt-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs font-semibold transition-colors">🗑️ Desconectar dispositivos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== Event Log ========== -->
+      <!-- Collapsible log with auto-scroll and gradient fade -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
+              <span class="material-icons-round text-slate-600 text-xl">history</span>
+              Registro de Eventos
+            </h2>
+            <button id="btn-log-toggle" class="p-1 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors" title="Mostrar/ocultar log">
+              <span class="material-icons-round text-lg" id="log-toggle-icon">expand_more</span>
+            </button>
+          </div>
+          <div class="flex gap-1">
+            <button id="btn-log-clear" class="p-2 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors" title="Limpiar log">
+              <span class="material-icons-round text-xl">delete_sweep</span>
+            </button>
+          </div>
+        </div>
+        
+        <p id="log-timestamp" class="text-[10px] text-slate-400 font-bold px-1">Última actualización: --:--:--</p>
+        
+        <div id="log-container" class="bg-white rounded-xl border-2 border-slate-300 h-52 overflow-hidden relative shadow-inner">
+          <div id="log-box" class="h-full overflow-y-auto p-4 text-xs font-mono space-y-1 log-scrollbar">
+            <div class="text-slate-600">Esperando conexión...</div>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== Timer Screen ==================== -->
+    <!-- Countdown timer configuration with mode selection and duration input -->
+    <div id="timer-screen" class="absolute inset-0 bg-white pt-32 px-6 pb-6 space-y-6 overflow-y-auto transition-transform duration-300 translate-x-full">
+      
+      <!-- Timer Settings Card -->
+      <div class="bg-slate-50 rounded-2xl border-2 border-slate-300 p-5 space-y-5">
+
+        <!-- Mode Selection (Cascada vs Eyectores) -->
+        <div class="grid grid-cols-2 gap-3">
+          <button 
+            id="timer-mode-1"
+            class="timer-mode-btn py-4 px-4 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all flex flex-col items-center justify-center gap-2">
+            <img src="waterfall-icon.png" alt="Cascada" class="w-8 h-8">
+            <span class="text-sm font-bold">Cascada</span>
+          </button>
+          <button 
+            id="timer-mode-2"
+            class="timer-mode-btn py-4 px-4 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all flex flex-col items-center justify-center gap-2">
+            <img src="waterjet-icon.png" alt="Eyectores" class="w-8 h-8">
+            <span class="text-sm font-bold">Eyectores</span>
+          </button>
+        </div>
+
+        <!-- Duration Selection (Hours and Minutes) -->
+        <div class="flex items-center gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-slate-500 font-medium mb-1 block">Horas</label>
+            <input 
+              id="timer-hours"
+              type="number"
+              min="0"
+              max="23"
+              value="1"
+              class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-2xl text-center"
+            />
+          </div>
+          <span class="text-3xl font-black text-slate-400 mt-5">:</span>
+          <div class="flex-1">
+            <label class="text-xs text-slate-500 font-medium mb-1 block">Minutos</label>
+            <input 
+              id="timer-minutes"
+              type="number"
+              min="0"
+              max="59"
+              value="0"
+              class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-2xl text-center"
+            />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Buttons (Cancel/Start) -->
+      <div class="grid grid-cols-2 gap-3">
+        <button 
+          id="btn-timer-cancel"
+          class="py-4 px-4 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-50 text-slate-900 font-bold transition-all active:scale-[0.98]">
+          Cancelar
+        </button>
+        <button 
+          id="btn-timer-start"
+          class="py-4 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-lg transition-all active:scale-[0.98]">
+          Iniciar Timer
+        </button>
+      </div>
+
+      <!-- Active Timer Display (shown when timer is running) -->
+      <!-- Countdown with stop button -->
+      <div id="active-timer-card" class="hidden bg-primary/10 rounded-2xl border-2 border-primary p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-icons-round text-primary text-2xl animate-pulse">timer</span>
+            <span class="text-sm font-bold text-slate-900">Timer Activo</span>
+          </div>
+          <button id="btn-timer-stop" class="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all">
+            <span class="material-icons-round text-xl">stop</span>
+          </button>
+        </div>
+        <div class="text-center">
+          <div id="timer-countdown" class="text-4xl font-black text-primary">--:--:--</div>
+          <div id="timer-mode-display" class="text-xs text-slate-600 font-medium mt-1">Modo: --</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== Programas Screen ==================== -->
+    <!-- Schedule management: view, create, edit, delete up to 3 programs -->
+    <div id="programas-screen" class="absolute inset-0 bg-white pt-32 px-6 pb-6 space-y-6 overflow-y-auto transition-transform duration-300 translate-x-full">
+      
+      <!-- Program Slots (Max 3) -->
+      <div class="space-y-3">
+        
+        <!-- ========== Program Slot 1 ========== -->
+        <div id="program-slot-1" class="bg-slate-50 rounded-2xl border-2 border-slate-300 p-4">
+          <button 
+            id="btn-create-program-1"
+            class="w-full py-4 px-4 rounded-xl border-2 border-dashed border-slate-400 bg-white hover:bg-slate-50 text-slate-600 font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+            <span class="material-icons-round text-2xl">add_circle</span>
+            <span>Crear Programa</span>
+          </button>
+          
+          <!-- Program Card (hidden initially, shown when program exists) -->
+          <div id="program-card-1" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <span class="material-icons-round text-primary text-2xl">calendar_month</span>
+                <span id="program-name-1" class="font-bold text-slate-900 truncate">Programa 1</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  id="btn-toggle-program-1"
+                  class="program-toggle p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-all"
+                  title="Activar/Desactivar">
+                  <span class="material-icons-round text-xl">toggle_on</span>
+                </button>
+                <button 
+                  id="btn-edit-program-1"
+                  class="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-all"
+                  title="Editar">
+                  <span class="material-icons-round text-xl">edit</span>
+                </button>
+                <button 
+                  id="btn-delete-program-1"
+                  class="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all"
+                  title="Eliminar">
+                  <span class="material-icons-round text-xl">delete</span>
+                </button>
+              </div>
+            </div>
+            <div id="program-summary-1" class="text-xs text-slate-600 space-y-1 pl-11">
+              <div>Días: <span class="font-medium">--</span></div>
+              <div>Modo: <span class="font-medium">--</span></div>
+              <div>Horario: <span class="font-medium">--</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== Program Slot 2 ========== -->
+        <div id="program-slot-2" class="bg-slate-50 rounded-2xl border-2 border-slate-300 p-4">
+          <button 
+            id="btn-create-program-2"
+            class="w-full py-4 px-4 rounded-xl border-2 border-dashed border-slate-400 bg-white hover:bg-slate-50 text-slate-600 font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+            <span class="material-icons-round text-2xl">add_circle</span>
+            <span>Crear Programa</span>
+          </button>
+          
+          <div id="program-card-2" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <span class="material-icons-round text-primary text-2xl">calendar_month</span>
+                <span id="program-name-2" class="font-bold text-slate-900 truncate">Programa 2</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  id="btn-toggle-program-2"
+                  class="program-toggle p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-all"
+                  title="Activar/Desactivar">
+                  <span class="material-icons-round text-xl">toggle_on</span>
+                </button>
+                <button 
+                  id="btn-edit-program-2"
+                  class="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-all"
+                  title="Editar">
+                  <span class="material-icons-round text-xl">edit</span>
+                </button>
+                <button 
+                  id="btn-delete-program-2"
+                  class="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all"
+                  title="Eliminar">
+                  <span class="material-icons-round text-xl">delete</span>
+                </button>
+              </div>
+            </div>
+            <div id="program-summary-2" class="text-xs text-slate-600 space-y-1 pl-11">
+              <div>Días: <span class="font-medium">--</span></div>
+              <div>Modo: <span class="font-medium">--</span></div>
+              <div>Horario: <span class="font-medium">--</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== Program Slot 3 ========== -->
+        <div id="program-slot-3" class="bg-slate-50 rounded-2xl border-2 border-slate-300 p-4">
+          <button 
+            id="btn-create-program-3"
+            class="w-full py-4 px-4 rounded-xl border-2 border-dashed border-slate-400 bg-white hover:bg-slate-50 text-slate-600 font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+            <span class="material-icons-round text-2xl">add_circle</span>
+            <span>Crear Programa</span>
+          </button>
+          
+          <div id="program-card-3" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <span class="material-icons-round text-primary text-2xl">calendar_month</span>
+                <span id="program-name-3" class="font-bold text-slate-900 truncate">Programa 3</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  id="btn-toggle-program-3"
+                  class="program-toggle p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-all"
+                  title="Activar/Desactivar">
+                  <span class="material-icons-round text-xl">toggle_on</span>
+                </button>
+                <button 
+                  id="btn-edit-program-3"
+                  class="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-all"
+                  title="Editar">
+                  <span class="material-icons-round text-xl">edit</span>
+                </button>
+                <button 
+                  id="btn-delete-program-3"
+                  class="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all"
+                  title="Eliminar">
+                  <span class="material-icons-round text-xl">delete</span>
+                </button>
+              </div>
+            </div>
+            <div id="program-summary-3" class="text-xs text-slate-600 space-y-1 pl-11">
+              <div>Días: <span class="font-medium">--</span></div>
+              <div>Modo: <span class="font-medium">--</span></div>
+              <div>Horario: <span class="font-medium">--</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ==================== Create Program Screen ==================== -->
+    <!-- Weekly schedule editor: 7-day table with day toggle, mode selection, time inputs -->
+    <div id="create-program-screen" class="absolute inset-0 bg-white pt-32 px-6 pb-6 space-y-6 overflow-y-auto transition-transform duration-300 translate-x-full">
+      
+      <!-- Schedule Table (7 rows for each day of the week) -->
+      <div class="bg-white rounded-xl border-2 border-slate-300 overflow-hidden">
+        <table class="w-full text-xs">
+            <!-- Table Header -->
+            <thead>
+              <tr class="bg-slate-100 border-b-2 border-slate-300">
+                <th class="py-1.5 px-1.5 text-center text-[10px] font-bold text-slate-600">Día</th>
+                <th class="py-1.5 px-1.5 text-center text-[10px] font-bold text-slate-600">Modo</th>
+                <th class="py-1.5 px-1.5 text-center text-[10px] font-bold text-slate-600">Inicio</th>
+                <th class="py-1.5 px-1.5 text-center text-[10px] font-bold text-slate-600">Fin</th>
+              </tr>
+            </thead>
+            <!-- Table Body: 7 rows (Mon-Sun) -->
+            <!-- Each row: day toggle, mode buttons (Cascada/Eyectores), start time, stop time -->
+            <tbody id="schedule-table-body">
+              <!-- Lunes (Monday - day index 1) -->
+              <tr class="border-b border-slate-200" data-day="1">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Lu</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+              <!-- Martes (Tuesday - day index 2) -->
+              <tr class="border-b border-slate-200" data-day="2">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Ma</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+              <!-- Miércoles (Wednesday - day index 3) -->
+              <tr class="border-b border-slate-200" data-day="3">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Mi</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+              <!-- Jueves (Thursday - day index 4) -->
+              <tr class="border-b border-slate-200" data-day="4">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Ju</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+              <!-- Viernes (Friday - day index 5) -->
+              <tr class="border-b border-slate-200" data-day="5">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Vi</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+              <!-- Sábado (Saturday - day index 6) -->
+              <tr class="border-b border-slate-200" data-day="6">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Sa</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+              <!-- Domingo (Sunday - day index 0) -->
+              <tr data-day="0">
+                <td class="py-2 px-1.5 text-center">
+                  <button class="day-toggle w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 font-bold text-slate-400 text-xs transition-all">Do</button>
+                </td>
+                <td class="py-2 px-1.5 text-center">
+                  <div class="flex gap-1 justify-center">
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="1" disabled title="Cascada">
+                      <img src="waterfall-icon.png" alt="Cascada" class="w-3.5 h-3.5">
+                    </button>
+                    <button class="mode-btn w-7 h-7 rounded-lg border-2 border-slate-300 bg-white hover:bg-slate-50 transition-all disabled:opacity-30" data-mode="2" disabled title="Eyectores">
+                      <img src="waterjet-icon.png" alt="Eyectores" class="w-3.5 h-3.5">
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="start-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+                <td class="py-2 px-1.5">
+                  <input type="time" class="stop-time w-full text-[10px] text-center border-2 border-slate-300 rounded-lg py-0.5 px-1 disabled:opacity-30 disabled:bg-slate-100" disabled>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      <!-- Action Buttons (Cancel/Create) -->
+      <div class="grid grid-cols-2 gap-3">
+        <button 
+          id="btn-create-cancel"
+          class="py-4 px-4 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-50 text-slate-900 font-bold transition-all active:scale-[0.98]">
+          Cancelar
+        </button>
+        <button 
+          id="btn-create-save"
+          class="py-4 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled>
+          Crear
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ==================== Footer ==================== -->
+    <footer class="pb-1.5 pt-1.5 text-center border-t border-slate-200 mt-auto bg-slate-50">
+          <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+        V3.2 • 2026
+      </p>
+    </footer>
+
+  </main>
+
+  <!-- ==================== External Libraries ==================== -->
+  <!-- MQTT.js WebSocket client -->
+  <script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
+
+  <!-- ==================== Application Modules ==================== -->
+  <!-- Load order: config → log → mqtt → programas → app -->
+  <script src="config.js"></script>           <!-- App configuration (topics, broker URL) -->
+  <script src="js/log.js"></script>          <!-- Event logging module -->
+  <script src="js/mqtt.js"></script>         <!-- MQTT client wrapper -->
+  <script src="js/programas.js"></script>    <!-- Schedule management -->
+  <script src="js/app.js"></script>          <!-- Main application controller -->
+  <script src="js/ble-provisioning.js"></script>
+
+  
+  
+  <!-- BLE Provisioning Functions -->
+  <script>
+    /**
+     * Show BLE loading spinner with custom message
+     * @param {string} message - Loading message to display
+     */
+    function showBLESpinner(message = 'Procesando...') {
+      const spinner = document.getElementById('ble-spinner');
+      const spinnerText = document.getElementById('spinner-text');
+      if (spinner) {
+        if (spinnerText) spinnerText.textContent = message;
+        spinner.classList.add('active');
+      }
+    }
+
+    /**
+     * Hide BLE loading spinner
+     */
+    function hideBLESpinner() {
+      const spinner = document.getElementById('ble-spinner');
+      if (spinner) {
+        spinner.classList.remove('active');
+      }
+    }
+
+    /**
+     * Detect if device is iOS
+     * @returns {boolean} true if iOS device detected
+     */
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+
+    /**
+     * Open provisioning flow based on device type
+     * - iOS: Show captive portal instructions
+     * - Android/Windows/macOS: Show BLE provisioning modal
+     */
+    function provisionNewDevice() {
+      if (isIOS()) {
+        // iOS: Show captive portal fallback
+        showCaptivePortalInstructions();
+      } else {
+        // Android/Windows/macOS: Show BLE provisioning modal
+        showBLEProvisioningModal();
+      }
+    }
+
+    /**
+     * Show BLE provisioning modal for Android/Windows/macOS
+     */
+    function showBLEProvisioningModal() {
+      const modal = document.getElementById('provision-modal');
+      const statusDiv = document.getElementById('provision-status');
+      const scanBtn = document.getElementById('scan-networks-btn');
+      const networksList = document.getElementById('networks-list');
+      
+      modal.style.display = 'flex';
+      document.getElementById('provision-ssid').value = '';
+      document.getElementById('provision-password').value = '';
+      statusDiv.classList.add('hidden');
+      networksList.classList.add('hidden');
+      scanBtn.classList.remove('hidden');
+    }
+
+    /**
+     * Show captive portal instructions for iOS and fallback devices
+     * Displays instructions for connecting to ESP32-Pool-Setup hotspot
+     */
+    function showCaptivePortalInstructions() {
+      const instructionsHTML = `
+        <div style="
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.5);
+          z-index: 9999;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        ">
+          <div style="
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 90%;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.3);
+          ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #0f172a;">
+                📱 Configurar WiFi (Portal Cautivo)
+              </h2>
+              <button onclick="closeCaptivePortalInstructions()" style="
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                padding: 0;
+              ">✕</button>
+            </div>
+
+            <div style="space: 16px; color: #475569; font-size: 14px; line-height: 1.6;">
+              <p style="margin-top: 0;"><strong>Este método funciona en:</strong> iPhone, iPad, o cualquier dispositivo sin Web Bluetooth.</p>
+
+              <h3 style="margin: 20px 0 8px 0; font-size: 16px; font-weight: bold; color: #0f172a;">Pasos:</h3>
+
+              <ol style="margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 12px;">
+                  <strong>Abre Ajustes WiFi</strong> en tu dispositivo
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>Busca la red:</strong> <code style="
+                    background: #f1f5f9;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-family: monospace;
+                    color: #0f172a;
+                  ">ESP32-Pool-Setup</code> (sin contraseña)
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>Conéctate</strong> a esa red
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>Se abrirá automáticamente</strong> un portal web
+                  <br/>
+                  <small style="color: #64748b;">Si no aparece, abre Safari y ve a: <code style="
+                    background: #f1f5f9;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-family: monospace;
+                    color: #0f172a;
+                  ">http://192.168.4.1</code></small>
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>Selecciona tu red WiFi</strong> de la lista
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>Ingresa tu contraseña</strong> (case-sensitive)
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>Haz clic en "Save"</strong>
+                </li>
+                <li style="margin-bottom: 12px;">
+                  <strong>El controlador reiniciará</strong> automáticamente
+                </li>
+                <li>
+                  <strong>Reconecta tu dispositivo</strong> a tu WiFi normal
+                </li>
+              </ol>
+
+              <div style="
+                background: #fef3c7;
+                border-left: 4px solid #f59e0b;
+                padding: 12px;
+                margin: 16px 0;
+                border-radius: 4px;
+                font-size: 13px;
+              ">
+                <strong>💡 Nota:</strong> Es normal que veas "Sin conexión a Internet" mientras estés conectado a <code style="
+                  background: rgba(0,0,0,0.1);
+                  padding: 2px 4px;
+                  border-radius: 2px;
+                  font-family: monospace;
+                ">ESP32-Pool-Setup</code>. Solo es un hotspot temporal para la configuración.
+              </div>
+
+              <details style="
+                background: #f8fafc;
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+                margin: 16px 0;
+              ">
+                <summary style="
+                  cursor: pointer;
+                  font-weight: bold;
+                  color: #0f172a;
+                ">¿No ves el portal? Haz clic aquí</summary>
+                <div style="margin-top: 12px; font-size: 13px; color: #475569;">
+                  <p><strong>Opción 1: Acceso manual</strong></p>
+                  <ol style="margin: 8px 0; padding-left: 20px;">
+                    <li>Asegúrate de estar conectado a <code style="
+                      background: #f1f5f9;
+                      padding: 2px 6px;
+                      border-radius: 3px;
+                      font-family: monospace;
+                      color: #0f172a;
+                    ">ESP32-Pool-Setup</code></li>
+                    <li>Abre Safari (u otro navegador)</li>
+                    <li>Ve a: <code style="
+                      background: #f1f5f9;
+                      padding: 2px 6px;
+                      border-radius: 3px;
+                      font-family: monospace;
+                      color: #0f172a;
+                    ">http://192.168.4.1</code></li>
+                  </ol>
+                  <p style="margin-top: 12px;"><strong>Opción 2: Reintentar</strong></p>
+                  <ol style="margin: 8px 0; padding-left: 20px;">
+                    <li>Desconéctate de <code style="
+                      background: #f1f5f9;
+                      padding: 2px 6px;
+                      border-radius: 3px;
+                      font-family: monospace;
+                      color: #0f172a;
+                    ">ESP32-Pool-Setup</code></li>
+                    <li>Reconécta nuevamente</li>
+                    <li>El portal debería aparecer automáticamente</li>
+                  </ol>
+                </div>
+              </details>
+
+              <div style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-top: 20px;
+              ">
+                <button onclick="closeCaptivePortalInstructions()" style="
+                  padding: 12px 16px;
+                  background: #e2e8f0;
+                  color: #0f172a;
+                  border: none;
+                  border-radius: 12px;
+                  font-weight: bold;
+                  font-size: 14px;
+                  cursor: pointer;
+                  transition: background 0.2s;
+                ">Cerrar</button>
+                <a href="http://192.168.4.1" target="_blank" style="
+                  padding: 12px 16px;
+                  background: #0f172a;
+                  color: white;
+                  border: none;
+                  border-radius: 12px;
+                  font-weight: bold;
+                  font-size: 14px;
+                  text-align: center;
+                  text-decoration: none;
+                  cursor: pointer;
+                  transition: background 0.2s;
+                " onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
+                  Ir al portal
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const container = document.createElement('div');
+      container.id = 'captive-portal-overlay';
+      container.innerHTML = instructionsHTML;
+      document.body.appendChild(container);
+    }
+
+    /**
+     * Close captive portal instructions overlay
+     */
+    function closeCaptivePortalInstructions() {
+      const overlay = document.getElementById('captive-portal-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+
+    function closeProvisionModal() {
+      hideBLESpinner();
+      document.getElementById('provision-modal').style.display = 'none';
+      document.getElementById('provision-ssid').value = '';
+      document.getElementById('provision-password').value = '';
+      document.getElementById('provision-password').disabled = true;
+      document.getElementById('provision-password').placeholder = 'Selecciona una red primero';
+      document.getElementById('provision-status').classList.add('hidden');
+      document.getElementById('connect-btn').disabled = false;
+      document.getElementById('connect-btn').textContent = 'Connect';
+      
+      // Reset instructions panel
+      const instructionsPanel = document.getElementById('instructions-panel');
+      const instructionsBtnText = document.getElementById('instructions-btn-text');
+      if (instructionsPanel) instructionsPanel.classList.add('hidden');
+      if (instructionsBtnText) instructionsBtnText.textContent = 'Instrucciones';
+    }
+
+    async function unpairDevices() {
+      if (!confirm('¿Borrar credenciales WiFi del Controlador Smart Pool y limpiar datos del navegador?\n\nEl controlador reiniciará en modo provisioning.')) {
+        return;
+      }
+
+      const statusDiv = document.getElementById('provision-status');
+      statusDiv.classList.remove('hidden');
+      statusDiv.className = 'text-xs text-blue-600';
+      
+      try {
+        // Send clear command via MQTT (device must be connected)
+        if (typeof MQTTModule !== 'undefined' && MQTTModule.isConnected()) {
+          const { TOPIC_WIFI_CLEAR } = APP_CONFIG;
+          showBLESpinner('Enviando comando de borrado...');
+          statusDiv.textContent = 'Enviando comando de borrado al controlador...';
+          MQTTModule.publish('clear', TOPIC_WIFI_CLEAR, (msg) => console.log('[MQTT]', msg));
+          console.log('[MQTT] Comando de borrado enviado al controlador (reiniciará en 2s)');
+          
+          // Wait for ESP32 to process and restart
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        } else {
+          hideBLESpinner();
+          alert('No hay conexión MQTT. Conecta el dispositivo primero.');
+          statusDiv.classList.add('hidden');
+          return;
+        }
+
+        // Clear browser storage and cache
+        showBLESpinner('Limpiando datos del navegador...');
+        statusDiv.textContent = 'Limpiando datos del navegador...';
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+
+        console.log('[Clear] Datos del navegador limpiados');
+        hideBLESpinner();
+        statusDiv.className = 'text-xs text-green-600';
+        statusDiv.innerHTML = `✓ <strong>Dispositivo desvinculado.</strong><br>El controlador reiniciará en modo BLE provisioning.<br>Recarga la página para reconectar.`;
+        
+        // Reload page to reset UI
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (error) {
+        hideBLESpinner();
+        console.error('Error unpairing:', error);
+        statusDiv.className = 'text-xs text-red-600';
+        statusDiv.textContent = `Error al desvincular: ${error.message}`;
+      }
+    }
+
+    async function startProvisioning() {
+      const ssid = document.getElementById('provision-ssid').value.trim();
+      const password = document.getElementById('provision-password').value;
+      const statusDiv = document.getElementById('provision-status');
+      const connectBtn = document.getElementById('connect-btn');
+
+      if (!ssid || !password) {
+        statusDiv.textContent = !ssid ? 'Seleccioná una red WiFi primero' : 'Ingresá la contraseña';
+        statusDiv.classList.remove('hidden');
+        statusDiv.className = 'text-xs text-red-600';
+        return;
+      }
+
+      connectBtn.disabled = true;
+      connectBtn.textContent = 'Conectando...';
+      statusDiv.classList.remove('hidden');
+      statusDiv.className = 'text-xs text-blue-600';
+
+      try {
+        await ESP32BLEProvisioning.provision(ssid, password, {
+          onProgress: (msg) => {
+            console.log('[BLE]', msg);
+            showBLESpinner(msg);
+            statusDiv.textContent = msg;
+          },
+          onSuccess: () => {
+            hideBLESpinner();
+            statusDiv.className = 'text-xs text-green-600 font-semibold';
+            statusDiv.textContent = '✓ ¡Dispositivo conectado! Configuración completada.';
+            connectBtn.textContent = '¡Listo!';
+            setTimeout(() => {
+              closeProvisionModal();
+            }, 3000);
+          },
+          onError: (error) => {
+            hideBLESpinner();
+            console.error('[BLE] Error:', error);
+            statusDiv.className = 'text-xs text-red-600';
+            
+            let errorMsg = error.message;
+            if (errorMsg.includes('No Characteristics')) {
+              errorMsg = 'Dispositivo encontrado pero servicio BLE no está listo. Asegúrate que el controlador esté en modo provisioning.';
+            } else if (errorMsg.includes('User cancelled')) {
+              errorMsg = 'Selección cancelada';
+            } else if (errorMsg.includes('GATT Server')) {
+              errorMsg = 'Conexión fallida. Intenta: 1) Desconectar dispositivo, 2) Reiniciar controlador, 3) Reintentar';
+            }
+            
+            statusDiv.textContent = errorMsg;
+            connectBtn.disabled = false;
+            connectBtn.textContent = 'Reintentar';
+          }
+        });
+      } catch (error) {
+        hideBLESpinner();
+        console.error('[BLE] Provisioning error:', error);
+        statusDiv.className = 'text-xs text-red-600';
+        statusDiv.textContent = error.message;
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Reintentar';
+      }
+    }
+
+    async function scanNetworksHandler() {
+      const scanBtn = document.getElementById('scan-networks-btn');
+      const networksList = document.getElementById('networks-list');
+      const networksContainer = document.getElementById('networks-container');
+      const networksLoading = document.getElementById('networks-loading');
+      const statusDiv = document.getElementById('provision-status');
+
+      // Disable button and show loading UI immediately
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Escaneando...';
+      networksList.classList.remove('hidden');
+      networksContainer.innerHTML = '';
+      networksLoading.style.display = 'block';
+
+      try {
+        // Connect to controller if not already connected
+        if (!ESP32BLEProvisioning.server || !ESP32BLEProvisioning.server.connected) {
+          showBLESpinner('Conectando al controlador...');
+          statusDiv.classList.remove('hidden');
+          statusDiv.className = 'text-xs text-blue-600';
+          statusDiv.textContent = 'Conectando al controlador...';
+          
+          // Connect to BLE device
+          await ESP32BLEProvisioning.connect();
+          
+          // Immediately start network scan after connection (parallel operation)
+          showBLESpinner('Escaneando redes WiFi...');
+          statusDiv.textContent = 'Conectado! Escaneando redes...';
+        } else {
+          showBLESpinner('Escaneando redes WiFi...');
+          statusDiv.classList.remove('hidden');
+          statusDiv.className = 'text-xs text-blue-600';
+          statusDiv.textContent = 'Escaneando redes...';
+        }
+
+        // Perform scan (ESP32 scans in parallel, we just wait for results)
+        const networks = await ESP32BLEProvisioning.scanNetworks();
+        
+        hideBLESpinner();
+
+        // Hide loading
+        networksLoading.style.display = 'none';
+
+        if (networks.length === 0) {
+          networksContainer.innerHTML = '<div class="p-3 text-center text-xs text-slate-500">No se encontraron redes</div>';
+          return;
+        }
+
+        // Display networks
+        networks.forEach(network => {
+          const locked = !network.open ? '🔒' : '🔓';
+          const signalStrength = network.rssi >= -50 ? '▓▓▓' : network.rssi >= -60 ? '▓▓░' : network.rssi >= -70 ? '▓░░' : '░░░';
+          
+          const networkBtn = document.createElement('button');
+          networkBtn.type = 'button';
+          networkBtn.className = 'w-full text-left px-3 py-2 bg-white hover:bg-blue-50 border border-slate-200 rounded text-xs transition-colors';
+          networkBtn.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-slate-900 truncate">${network.ssid}</div>
+                <div class="text-[10px] text-slate-500">${signalStrength} ${network.rssi}dBm</div>
+              </div>
+              <span class="ml-2">${locked}</span>
+            </div>
+          `;
+          
+          networkBtn.addEventListener('click', () => {
+            const ssidInput = document.getElementById('provision-ssid');
+            const passwordInput = document.getElementById('provision-password');
+            const statusDiv = document.getElementById('provision-status');
+            
+            // Set selected network
+            ssidInput.value = network.ssid;
+            
+            // Enable password field and update placeholder
+            passwordInput.disabled = false;
+            passwordInput.placeholder = 'Contraseña';
+            passwordInput.focus();
+            
+            // Show selected network
+            statusDiv.classList.remove('hidden');
+            statusDiv.className = 'text-xs text-green-600 font-semibold';
+            statusDiv.textContent = `✓ Red seleccionada: ${network.ssid}`;
+            
+            // Hide networks list
+            networksList.classList.add('hidden');
+          });
+          
+          networksContainer.appendChild(networkBtn);
+        });
+
+      } catch (error) {
+        hideBLESpinner();
+        console.error('[BLE] Scan error:', error);
+        networksList.classList.remove('hidden');
+        networksContainer.innerHTML = `<div class="p-3 text-center text-xs text-red-600">Error: ${error.message}</div>`;
+        statusDiv.className = 'text-xs text-red-600';
+        statusDiv.textContent = `Error: ${error.message}`;
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Buscar dispositivo y redes';
+      }
+    }
+
+    // Setup event listeners when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Cancel button
+      document.getElementById('cancel-btn')?.addEventListener('click', closeProvisionModal);
+      
+      // Connect button
+      document.getElementById('connect-btn')?.addEventListener('click', startProvisioning);
+      
+      // Unpair button
+      document.getElementById('unpair-btn')?.addEventListener('click', unpairDevices);
+
+      // Instructions toggle button
+      document.getElementById('instructions-btn')?.addEventListener('click', () => {
+        const panel = document.getElementById('instructions-panel');
+        const btnText = document.getElementById('instructions-btn-text');
+        
+        if (panel.classList.contains('hidden')) {
+          panel.classList.remove('hidden');
+          btnText.textContent = 'Ocultar instrucciones';
+        } else {
+          panel.classList.add('hidden');
+          btnText.textContent = 'Instrucciones';
+        }
+      });
+
+      // Scan Networks button
+      document.getElementById('scan-networks-btn')?.addEventListener('click', scanNetworksHandler);
+      
+      // Enter key to submit
+      ['provision-ssid', 'provision-password'].forEach(id => {
+        document.getElementById(id)?.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') startProvisioning();
+        });
+      });
+      
+      // Click outside modal to close
+      document.getElementById('provision-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'provision-modal') closeProvisionModal();
+      });
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+

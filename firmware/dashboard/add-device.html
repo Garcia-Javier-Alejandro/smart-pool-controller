@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Pool Controller - Add Device</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #666;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .step-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      padding: 0 20px;
+    }
+
+    .step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+      opacity: 0.4;
+      transition: opacity 0.3s;
+    }
+
+    .step.active {
+      opacity: 1;
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #ddd;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .step.active .step-number {
+      background: #667eea;
+    }
+
+    .step.completed .step-number {
+      background: #10b981;
+    }
+
+    .step-label {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .password-toggle {
+      position: relative;
+    }
+
+    .password-toggle button {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 4px;
+      font-size: 14px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #666;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .status {
+      padding: 16px;
+      border-radius: 10px;
+      margin: 20px 0;
+      display: none;
+      animation: slideIn 0.3s;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status-info {
+      background: #dbeafe;
+      color: #1e40af;
+      border-left: 4px solid #3b82f6;
+    }
+
+    .status-success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left: 4px solid #10b981;
+    }
+
+    .status-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 4px solid #ef4444;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .info-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .info-box strong {
+      color: #333;
+    }
+
+    .success-icon {
+      text-align: center;
+      font-size: 64px;
+      margin: 20px 0;
+      animation: bounceIn 0.6s;
+    }
+
+    @keyframes bounceIn {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-20px); }
+      60% { transform: translateY(-10px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏊 Add Pool Controller</h1>
+    <p class="subtitle">Connect your ESP32 device to WiFi</p>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+      <div class="step active" id="step1">
+        <div class="step-number">1</div>
+        <div class="step-label">WiFi Info</div>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-number">2</div>
+        <div class="step-label">Scan Device</div>
+      </div>
+      <div class="step" id="step3">
+        <div class="step-number">3</div>
+        <div class="step-label">Provision</div>
+      </div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusMessage" class="status"></div>
+
+    <!-- Step 1: WiFi Credentials Form -->
+    <div id="formContainer">
+      <div class="info-box">
+        <strong>💡 How it works:</strong><br>
+        1. Enter your WiFi credentials<br>
+        2. Click "Scan for Device" to find your ESP32<br>
+        3. Credentials will be sent via Bluetooth<br>
+        4. Your ESP32 will connect to WiFi automatically
+      </div>
+
+      <form id="provisioningForm">
+        <div class="form-group">
+          <label for="ssid">WiFi Network Name (SSID)</label>
+          <input 
+            type="text" 
+            id="ssid" 
+            name="ssid" 
+            placeholder="Enter your WiFi network name"
+            required
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">WiFi Password</label>
+          <div class="password-toggle">
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              placeholder="Enter your WiFi password"
+              required
+              autocomplete="off"
+            >
+            <button type="button" onclick="togglePassword()">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="scanBtn">
+          📡 Scan for Device
+        </button>
+      </form>
+    </div>
+
+    <!-- Step 3: Success Screen -->
+    <div id="successContainer" class="hidden">
+      <div class="success-icon">✅</div>
+      <h2 style="text-align: center; color: #10b981; margin-bottom: 16px;">
+        Device Connected!
+      </h2>
+      <p style="text-align: center; color: #666; margin-bottom: 24px;">
+        Your ESP32 Pool Controller is now connected to WiFi and ready to use.
+      </p>
+      <button class="btn btn-secondary" onclick="location.reload()">
+        Add Another Device
+      </button>
+      <button class="btn btn-primary" onclick="window.location.href='/'">
+        Go to Dashboard
+      </button>
+    </div>
+  </div>
+
+  <script src="ble-provisioning.js"></script>
+  <script>
+    // UI Helper Functions
+    function showStatus(message, type = 'info') {
+      const statusDiv = document.getElementById('statusMessage');
+      statusDiv.className = `status status-${type} show`;
+      statusDiv.textContent = message;
+    }
+
+    function hideStatus() {
+      document.getElementById('statusMessage').classList.remove('show');
+    }
+
+    function setStep(stepNumber) {
+      for (let i = 1; i <= 3; i++) {
+        const step = document.getElementById(`step${i}`);
+        step.classList.remove('active', 'completed');
+        if (i < stepNumber) step.classList.add('completed');
+        if (i === stepNumber) step.classList.add('active');
+      }
+    }
+
+    function showLoading(button, text = 'Processing...') {
+      button.disabled = true;
+      button.innerHTML = `<span class="loading"></span>${text}`;
+    }
+
+    function hideLoading(button, text) {
+      button.disabled = false;
+      button.innerHTML = text;
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    // Check Web Bluetooth support
+    if (!ESP32BLEProvisioning.isSupported()) {
+      showStatus('⚠️ Web Bluetooth not supported. Please use Chrome, Edge, or Opera browser.', 'error');
+      document.getElementById('scanBtn').disabled = true;
+    }
+
+    // Form submission handler
+    document.getElementById('provisioningForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const ssid = document.getElementById('ssid').value.trim();
+      const password = document.getElementById('password').value;
+      const scanBtn = document.getElementById('scanBtn');
+
+      if (!ssid || !password) {
+        showStatus('❌ Please enter both SSID and password', 'error');
+        return;
+      }
+
+      try {
+        // Step 2: Scanning
+        setStep(2);
+        showLoading(scanBtn, 'Scanning...');
+        showStatus('📡 Click on your ESP32 device in the popup...', 'info');
+
+        // Provision device
+        await ESP32BLEProvisioning.provision(ssid, password, {
+          onProgress: (message) => {
+            console.log('[UI]', message);
+            
+            if (message.includes('Sending')) {
+              setStep(3);
+            }
+            
+            showStatus(`🔄 ${message}`, 'info');
+          },
+          onSuccess: () => {
+            setStep(3);
+            document.getElementById('step3').classList.add('completed');
+            
+            // Show success screen
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('successContainer').classList.remove('hidden');
+            hideStatus();
+          },
+          onError: (error) => {
+            console.error('[UI] Error:', error);
+            let errorMessage = '❌ Provisioning failed: ';
+            
+            if (error.message.includes('User cancelled')) {
+              errorMessage += 'You cancelled the device selection';
+            } else if (error.message.includes('not supported')) {
+              errorMessage += 'Web Bluetooth not supported in this browser';
+            } else {
+              errorMessage += error.message;
+            }
+            
+            showStatus(errorMessage, 'error');
+            hideLoading(scanBtn, '📡 Scan for Device');
+            setStep(1);
+          }
+        });
+
+      } catch (error) {
+        console.error('[UI] Provisioning error:', error);
+        hideLoading(scanBtn, '📡 Scan for Device');
+        setStep(1);
+      }
+    });
+  </script>
+</body>
+</html>
