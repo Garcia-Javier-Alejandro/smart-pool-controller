@@ -1,0 +1,21 @@
+node_modules/
+dist/
+build/
+.tmp/
+.cache/
+.parcel-cache/
+coverage/
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# Env
+.env
+.env.*
+# OS cruft
+.DS_Store
+Thumbs.db
+# Editors
+.vscode/
+.idea/
