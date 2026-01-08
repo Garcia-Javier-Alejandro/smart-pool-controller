@@ -1,0 +1,22 @@
+name = "smart-pool-controller"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "."
+
+# D1 Database Bindings for multi-tenant support
+[[d1_databases]]
+binding = "DB"
+database_name = "smart-pool-controller-db"
+database_id = "" # Run: wrangler d1 create smart-pool-controller-db
+
+# Environment Variables
+[vars]
+# Public variables (can be committed)
+ENVIRONMENT = "production"
+JWT_EXPIRY_HOURS = "24"
+
+# Secret environment variables (set via wrangler secret put)
+# JWT_SECRET - set via: wrangler secret put JWT_SECRET
+# API_KEY - set via: wrangler secret put API_KEY (optional, for API key auth)
+# HIVEMQ_API_TOKEN - set via: wrangler secret put HIVEMQ_API_TOKEN (optional)
+# MQTT_BROKER_URL - set via: wrangler secret put MQTT_BROKER_URL (optional)
