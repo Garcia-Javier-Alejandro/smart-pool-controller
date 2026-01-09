@@ -41,31 +41,31 @@ export async function onRequest({ request, env }) {
     return json({ ok: false, error: 'Invalid JSON body' }, 400);
   }
 
-  const { username, password } = payload;
+  const { email, password } = payload;
 
   // Validate required fields
-  if (!username || !password) {
+  if (!email || !password) {
     return json({ 
       ok: false, 
-      error: 'Missing required fields: username, password' 
+      error: 'Missing required fields: email, password' 
     }, 400);
   }
 
   try {
-    // Find user by username
+    // Find user by email
     const user = await env.DB
-      .prepare('SELECT id, username, email, password_hash, device_id FROM users WHERE username = ?')
-      .bind(username)
+      .prepare('SELECT id, email, password_hash, device_id FROM users WHERE email = ?')
+      .bind(email)
       .first();
 
     if (!user) {
-      return json({ ok: false, error: 'Invalid username or password' }, 401);
+      return json({ ok: false, error: 'Invalid email or password' }, 401);
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
-      return json({ ok: false, error: 'Invalid username or password' }, 401);
+      return json({ ok: false, error: 'Invalid email or password' }, 401);
     }
 
     // Generate JWT token
@@ -73,7 +73,6 @@ export async function onRequest({ request, env }) {
     const token = await generateJWT(
       {
         userId: user.id,
-        username: user.username,
         email: user.email,
         deviceId: user.device_id
       },

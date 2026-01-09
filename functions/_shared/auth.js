@@ -212,9 +212,9 @@ export function validateEmail(email) {
 // ============================================
 
 export function validatePasswordStrength(password) {
-  // Minimum 12 characters, must contain uppercase, lowercase, number, and special char
-  if (password.length < 12) {
-    return { valid: false, error: 'Password must be at least 12 characters long' };
+  // Minimum 8 characters, must contain uppercase, lowercase, number, and special char
+  if (password.length < 8) {
+    return { valid: false, error: 'Password must be at least 8 characters long' };
   }
   if (!/[A-Z]/.test(password)) {
     return { valid: false, error: 'Password must contain at least one uppercase letter' };

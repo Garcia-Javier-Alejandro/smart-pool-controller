@@ -4,67 +4,66 @@ const API_BASE_URL = 'https://iot-5wo.pages.dev'; // Your existing Pages Functio
 // Utility Functions
 function showAuthSection() {
     document.getElementById('authSection').style.display = 'block';
-    document.getElementById('dashboardSection').style.display = 'none';
+    document.getElementById('dashboardSection').classList.add('hidden');
     document.getElementById('navLinks').innerHTML = '';
 }
 
 function showDashboard() {
     document.getElementById('authSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'block';
-    document.getElementById('navLinks').innerHTML = '<a href="#" onclick="handleLogout()" class="btn-logout">Logout</a>';
+    document.getElementById('dashboardSection').classList.remove('hidden');
+    document.getElementById('navLinks').innerHTML = '<a href="#" onclick="handleLogout()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors">Cerrar Sesión</a>';
 }
 
 function switchToLogin(event) {
     event.preventDefault();
-    document.getElementById('loginForm').classList.add('active');
-    document.getElementById('registerForm').classList.remove('active');
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
     document.getElementById('authMessage').textContent = '';
-    document.getElementById('authMessage').className = 'message';
+    document.getElementById('authMessage').classList.add('hidden');
 }
 
 function switchToRegister(event) {
     event.preventDefault();
-    document.getElementById('registerForm').classList.add('active');
-    document.getElementById('loginForm').classList.remove('active');
+    document.getElementById('registerForm').classList.remove('hidden');
+    document.getElementById('loginForm').classList.add('hidden');
     document.getElementById('authMessage').textContent = '';
-    document.getElementById('authMessage').className = 'message';
+    document.getElementById('authMessage').classList.add('hidden');
 }
 
 function showMessage(text, type) {
     const msgEl = document.getElementById('authMessage');
     msgEl.textContent = text;
-    msgEl.className = `message ${type}`;
+    msgEl.classList.remove('hidden');
     if (type === 'success') {
+        msgEl.className = 'message-success mt-6';
         setTimeout(() => {
-            msgEl.className = 'message';
+            msgEl.classList.add('hidden');
         }, 3000);
+    } else {
+        msgEl.className = 'message-error mt-6';
     }
 }
 
 function copyToClipboard(elementId) {
     const element = document.getElementById(elementId);
-    element.select();
-    document.execCommand('copy');
-    alert('Copied to clipboard!');
-}
-
-function toggleMqttPassword() {
-    const input = document.getElementById('mqttPassword');
-    const btn = event.target;
-    if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = 'Hide';
-    } else {
-        input.type = 'password';
-        btn.textContent = 'Show';
-    }
+    const text = element.value;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '¡Copiado!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    }).catch(() => {
+        alert('Error al copiar al portapapeles');
+    });
 }
 
 // Authentication Functions
 async function handleLogin(event) {
     event.preventDefault();
 
-    const username = document.getElementById('loginUsername').value;
+    const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
 
     try {
@@ -73,13 +72,13 @@ async function handleLogin(event) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ email, password })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            showMessage(data.error || 'Login failed', 'error');
+            showMessage(data.error || '¡Inicio de sesión fallido!', 'error');
             return;
         }
 
@@ -89,21 +88,20 @@ async function handleLogin(event) {
         localStorage.setItem('expiresIn', data.expiresIn);
         localStorage.setItem('loginTime', Date.now());
 
-        showMessage('Login successful!', 'success');
+        showMessage('¡Inicio de sesión exitoso!', 'success');
         setTimeout(() => {
             loadDashboard();
             showDashboard();
         }, 1000);
     } catch (error) {
         console.error('Login error:', error);
-        showMessage('Network error. Please try again.', 'error');
+        showMessage('Error de red. Por favor intenta de nuevo.', 'error');
     }
 }
 
 async function handleRegister(event) {
     event.preventDefault();
 
-    const username = document.getElementById('registerUsername').value;
     const email = document.getElementById('registerEmail').value;
     const password = document.getElementById('registerPassword').value;
     const deviceId = document.getElementById('registerDeviceId').value;
@@ -114,19 +112,18 @@ async function handleRegister(event) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ username, email, password, deviceId })
+            body: JSON.stringify({ email, password, deviceId })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            showMessage(data.error || 'Registration failed', 'error');
+            showMessage(data.error || '¡Registro fallido!', 'error');
             return;
         }
 
-        showMessage('Registration successful! Please login.', 'success');
+        showMessage('¡Registro exitoso! Por favor inicia sesión.', 'success');
         setTimeout(() => {
-            document.getElementById('registerUsername').value = '';
             document.getElementById('registerEmail').value = '';
             document.getElementById('registerPassword').value = '';
             document.getElementById('registerDeviceId').value = '';
@@ -134,7 +131,7 @@ async function handleRegister(event) {
         }, 1500);
     } catch (error) {
         console.error('Register error:', error);
-        showMessage('Network error. Please try again.', 'error');
+        showMessage('Error de red. Por favor intenta de nuevo.', 'error');
     }
 }
 
@@ -167,7 +164,7 @@ async function generateMqttCredentials() {
     const token = localStorage.getItem('token');
 
     if (!token) {
-        showMessage('No token found. Please login again.', 'error');
+        showMessage('No se encontró token. Por favor inicia sesión de nuevo.', 'error');
         return;
     }
 
@@ -191,10 +188,10 @@ async function generateMqttCredentials() {
         document.getElementById('mqttPassword').value = data.mqttPassword;
         document.getElementById('brokerUrl').textContent = data.brokerUrl;
         document.getElementById('topicPrefix').textContent = data.topicPrefix;
-        document.getElementById('mqttInfo').style.display = 'block';
+        document.getElementById('mqttInfo').classList.remove('hidden');
     } catch (error) {
         console.error('MQTT credentials error:', error);
-        showMessage('Network error. Please try again.', 'error');
+        showMessage('Error de red. Por favor intenta de nuevo.', 'error');
     }
 }
 

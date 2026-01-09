@@ -36,21 +36,13 @@ export async function onRequest({ request, env }) {
     return json({ ok: false, error: 'Invalid JSON body' }, 400);
   }
 
-  const { username, email, password, deviceId } = payload;
+  const { email, password, deviceId } = payload;
 
   // Validate required fields
-  if (!username || !email || !password || !deviceId) {
+  if (!email || !password || !deviceId) {
     return json({ 
       ok: false, 
-      error: 'Missing required fields: username, email, password, deviceId' 
-    }, 400);
-  }
-
-  // Validate username (alphanumeric, 3-50 chars)
-  if (!/^[a-zA-Z0-9_-]{3,50}$/.test(username)) {
-    return json({ 
-      ok: false, 
-      error: 'Username must be 3-50 characters (alphanumeric, underscore, hyphen only)' 
+      error: 'Missing required fields: email, password, deviceId' 
     }, 400);
   }
 
@@ -74,14 +66,14 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-    // Check if username already exists
+    // Check if email already exists
     const existingUser = await env.DB
-      .prepare('SELECT id FROM users WHERE username = ? OR email = ?')
-      .bind(username, email)
+      .prepare('SELECT id FROM users WHERE email = ?')
+      .bind(email)
       .first();
 
     if (existingUser) {
-      return json({ ok: false, error: 'Username or email already registered' }, 409);
+      return json({ ok: false, error: 'Email already registered' }, 409);
     }
 
     // Check if device_id is already claimed
@@ -105,8 +97,8 @@ export async function onRequest({ request, env }) {
 
     // Insert new user
     await env.DB
-      .prepare('INSERT INTO users (id, username, email, password_hash, device_id, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(userId, username, email, passwordHash, deviceId.toUpperCase(), Date.now())
+      .prepare('INSERT INTO users (id, email, password_hash, device_id, created_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(userId, email, passwordHash, deviceId.toUpperCase(), Date.now())
       .run();
 
     // Create device entry
@@ -119,7 +111,7 @@ export async function onRequest({ request, env }) {
         deviceDbId,
         deviceId.toUpperCase(),
         userId,
-        `${username}'s Pool Controller`,
+        `Pool Controller`,
         topicPrefix,
         'provisioning',
         Date.now()
@@ -131,7 +123,7 @@ export async function onRequest({ request, env }) {
       message: 'Registration successful',
       userId,
       deviceId: deviceId.toUpperCase(),
-      username
+      email
     }, 201);
 
   } catch (error) {
