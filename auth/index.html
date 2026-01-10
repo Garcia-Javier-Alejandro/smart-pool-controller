@@ -24,7 +24,7 @@
             @apply px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-colors;
         }
         .link-text {
-            @apply text-[#2B7EC5] hover:text-[#001A72] font-bold transition-colors cursor-pointer;
+            @apply text-[#2B7EC5] hover:text-[#001A72] font-bold transition-colors cursor-pointer no-underline inline;
         }
         .form-input {
             @apply w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#2B7EC5] transition-colors;
@@ -47,18 +47,18 @@
 <body class="bg-gradient-to-br from-[#E8F0F7] to-[#F3E8FF]">
     <div class="flex flex-col min-h-screen">
         <!-- Main Content -->
-        <main class="flex-1 w-full max-w-md mx-auto px-4 py-8 flex flex-col justify-center">
+        <main class="flex-1 w-full flex items-center justify-center px-4 py-8">
             <!-- Login/Register Section (shown when not authenticated) -->
-            <div id="authSection" class="w-full">
+            <div id="authSection" class="w-full max-w-md">
                 <!-- Login Form -->
-                <div id="loginForm" class="glass-effect rounded-2xl shadow-lg p-8 hidden">
+                <div id="loginForm" class="bg-white rounded-2xl shadow-lg p-8 hidden">
                     <!-- Header -->
                     <div class="mb-8 pb-6 border-b border-gray-200">
                         <div class="flex items-center gap-2 mb-4">
                             <span class="text-2xl">💧</span>
                             <h1 class="text-xl font-bold text-[#001A72]">Smart Pool</h1>
                         </div>
-                        <h2 class="text-2xl font-bold text-[#001A72] mb-2">Iniciar Sesión</h2>
+                        <h2 class="text-2xl font-bold text-[#001A72]">Iniciar Sesión</h2>
                     </div>
                     
                     <form onsubmit="handleLogin(event)" class="space-y-5">
@@ -77,19 +77,25 @@
                         ¿No tienes cuenta? 
                         <span class="link-text" onclick="switchToRegister(event)">Crear una cuenta</span>
                     </p>
+
+                    <!-- Footer -->
+                    <div class="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
+                        <p>V3.2 &nbsp;•&nbsp; 2026</p>
+                    </div>
                 </div>
 
                 <!-- Register Form -->
-                <div id="registerForm" class="glass-effect rounded-2xl shadow-lg p-0">
-                    <!-- Banner/Header -->
-                    <div class="h-28 w-full rounded-t-2xl bg-gradient-to-r from-[#001A72] to-[#2B7EC5]"></div>
-                    
-                    <div class="p-8">
-                        <div class="mb-6">
-                            <h2 class="text-2xl font-bold text-[#001A72] mb-2">Registro de Dispositivo</h2>
-                            <p class="text-gray-600">Registra tu controlador y crea tu cuenta.</p>
+                <div id="registerForm" class="bg-white rounded-2xl shadow-lg p-8">
+                    <!-- Header -->
+                    <div class="mb-8 pb-6 border-b border-gray-200">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-2xl">💧</span>
+                            <h1 class="text-xl font-bold text-[#001A72]">Smart Pool</h1>
                         </div>
-                        
+                        <h2 class="text-2xl font-bold text-[#001A72]">Registro de Dispositivo</h2>
+                        <p class="text-gray-600 mt-2">Registra tu controlador y crea tu cuenta.</p>
+                    </div>
+                    
                     <form onsubmit="handleRegister(event)" class="space-y-5">
                         <div>
                             <label for="registerDeviceId" class="form-label">ID del Dispositivo</label>
@@ -109,17 +115,16 @@
                     <p class="text-center text-gray-600 mt-6">
                         ¿Ya tienes cuenta? 
                         <span class="link-text" onclick="switchToLogin(event)">Inicia sesión</span>
-                    </p/p>
+                    </p>
+
+                    <!-- Footer -->
+                    <div class="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
+                        <p>V3.2 &nbsp;•&nbsp; 2026</p>
                     </div>
                 </div>
 
                 <!-- Message Alert -->
                 <div id="authMessage" class="mt-6 hidden"></div>
-
-                <!-- Footer -->
-                <div class="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
-                    <p>V3.2 &nbsp;•&nbsp; 2026</p>
-                </div>
             </div>
 
             <!-- Dashboard Section (shown when authenticated) -->
