@@ -24,10 +24,10 @@
             @apply px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-colors;
         }
         .link-text {
-            @apply text-[#2B7EC5] hover:text-[#001A72] font-semibold transition-colors cursor-pointer;
+            @apply text-[#2B7EC5] hover:text-[#001A72] font-bold transition-colors cursor-pointer;
         }
         .form-input {
-            @apply w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#2B7EC5] transition-colors;
+            @apply w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#2B7EC5] transition-colors;
         }
         .form-label {
             @apply block text-sm font-semibold text-gray-700 mb-2;
@@ -46,25 +46,21 @@
 </head>
 <body class="bg-gradient-to-br from-[#E8F0F7] to-[#F3E8FF]">
     <div class="flex flex-col min-h-screen">
-        <!-- Navigation -->
-        <nav class="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-100">
-            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl">💧</span>
-                    <h1 class="text-xl font-bold text-[#001A72]">Smart Pool</h1>
-                </div>
-                <div id="navLinks" class="flex items-center gap-4">
-                    <!-- Logout button shown only when authenticated -->
-                </div>
-            </div>
-        </nav>
-
         <!-- Main Content -->
         <main class="flex-1 w-full max-w-md mx-auto px-4 py-8 flex flex-col justify-center">
             <!-- Login/Register Section (shown when not authenticated) -->
             <div id="authSection" class="w-full">
                 <!-- Login Form -->
                 <div id="loginForm" class="glass-effect rounded-2xl shadow-lg p-8 hidden">
+                    <!-- Header -->
+                    <div class="mb-8 pb-6 border-b border-gray-200">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-2xl">💧</span>
+                            <h1 class="text-xl font-bold text-[#001A72]">Smart Pool</h1>
+                        </div>
+                        <h2 class="text-2xl font-bold text-[#001A72] mb-2">Iniciar Sesión</h2>
+                    </div>
+                    
                     <form onsubmit="handleLogin(event)" class="space-y-5">
                         <div>
                             <label for="loginEmail" class="form-label">Dirección de Correo</label>
@@ -94,34 +90,36 @@
                             <p class="text-gray-600">Registra tu controlador y crea tu cuenta.</p>
                         </div>
                         
-                        <form onsubmit="handleRegister(event)" class="space-y-5">
-                            <div>
-                                <label for="registerDeviceId" class="form-label">ID del Dispositivo</label>
-                                <input type="text" id="registerDeviceId" class="form-input" placeholder="ESP-ABC123" pattern="^ESP-[A-Fa-f0-9]{6}$" title="Formato: ESP-XXXXXX (6 caracteres hexadecimales)" required>
-                            </div>
-                            <div>
-                                <label for="registerEmail" class="form-label">Dirección de Correo</label>
-                                <input type="email" id="registerEmail" class="form-input" placeholder="tumail@example.com" required>
-                            </div>
-                            <div>
-                                <label for="registerPassword" class="form-label">Contraseña</label>
-                                <div class="space-y-2">
-                                    <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 8 caracteres" minlength="8" required>
-                                    <p class="text-xs text-gray-500">Se recomienda mayúsculas, minúsculas, números y símbolos</p>
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full primary-btn">Crear Cuenta</button>
-                        </form>
-                        
-                        <p class="text-center text-gray-600 mt-6">
-                            ¿Ya tienes cuenta? 
-                            <span class="link-text" onclick="switchToLogin(event)">Inicia sesión</span>
-                        </p>
+                    <form onsubmit="handleRegister(event)" class="space-y-5">
+                        <div>
+                            <label for="registerDeviceId" class="form-label">ID del Dispositivo</label>
+                            <input type="text" id="registerDeviceId" class="form-input" placeholder="ESP-ABC123" pattern="^ESP-[A-Fa-f0-9]{6}$" title="Formato: ESP-XXXXXX (6 caracteres hexadecimales)" required>
+                        </div>
+                        <div>
+                            <label for="registerEmail" class="form-label">Dirección de Correo</label>
+                            <input type="email" id="registerEmail" class="form-input" placeholder="tumail@example.com" required>
+                        </div>
+                        <div>
+                            <label for="registerPassword" class="form-label">Contraseña</label>
+                            <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 8 caracteres" minlength="8" required>
+                        </div>
+                        <button type="submit" class="w-full primary-btn">Crear Cuenta</button>
+                    </form>
+                    
+                    <p class="text-center text-gray-600 mt-6">
+                        ¿Ya tienes cuenta? 
+                        <span class="link-text" onclick="switchToLogin(event)">Inicia sesión</span>
+                    </p/p>
                     </div>
                 </div>
 
                 <!-- Message Alert -->
                 <div id="authMessage" class="mt-6 hidden"></div>
+
+                <!-- Footer -->
+                <div class="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
+                    <p>V3.2 &nbsp;•&nbsp; 2026</p>
+                </div>
             </div>
 
             <!-- Dashboard Section (shown when authenticated) -->
@@ -196,13 +194,6 @@
                 </div>
             </div>
         </main>
-
-        <!-- Footer -->
-        <footer class="bg-white border-t border-gray-100 mt-12">
-            <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-600">
-                <p>💧 Controlador de Piscina &nbsp;•&nbsp; © 2026 &nbsp;•&nbsp; Plataforma Multi-Inquilino Segura</p>
-            </div>
-        </footer>
     </div>
 
     <script src="app.js"></script>
