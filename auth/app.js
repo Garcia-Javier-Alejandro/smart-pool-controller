@@ -227,7 +227,6 @@ function init() {
         showDashboard();
     } else {
         showAuthSection();
-        switchToLogin(new Event('click'));
     }
 }
 
