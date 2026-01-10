@@ -63,10 +63,11 @@ function validatePassword(value) {
     return value.length >= 8;
 }
 
-function clearValidationErrors() {
-    document.getElementById('deviceIdError').classList.add('hidden');
-    document.getElementById('emailError').classList.add('hidden');
-    document.getElementById('passwordError').classList.add('hidden');
+function clearValidationErrors(formType) {
+    const prefix = formType === 'register' ? '' : 'login';
+    document.getElementById(prefix + 'deviceIdError')?.classList.add('hidden');
+    document.getElementById(prefix + 'emailError')?.classList.add('hidden');
+    document.getElementById(prefix + 'passwordError')?.classList.add('hidden');
 }
 
 function showValidationError(fieldId) {
@@ -94,6 +95,24 @@ async function handleLogin(event) {
 
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
+
+    // Clear previous errors
+    clearValidationErrors('login');
+
+    // Validate inputs
+    let hasErrors = false;
+    if (!validateEmail(email)) {
+        showValidationError('loginEmail');
+        hasErrors = true;
+    }
+    if (!validatePassword(password)) {
+        showValidationError('loginPassword');
+        hasErrors = true;
+    }
+
+    if (hasErrors) {
+        return;
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -136,7 +155,7 @@ async function handleRegister(event) {
     const deviceId = document.getElementById('registerDeviceId').value;
 
     // Clear previous errors
-    clearValidationErrors();
+    clearValidationErrors('register');
 
     // Validate inputs
     let hasErrors = false;
