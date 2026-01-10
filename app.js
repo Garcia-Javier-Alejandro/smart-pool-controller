@@ -6,6 +6,9 @@ function showAuthSection() {
     document.getElementById('authSection').style.display = 'block';
     document.getElementById('dashboardSection').classList.add('hidden');
     document.getElementById('navLinks').innerHTML = '';
+    // Default to registration view for initial onboarding
+    document.getElementById('registerForm').classList.remove('hidden');
+    document.getElementById('loginForm').classList.add('hidden');
 }
 
 function showDashboard() {

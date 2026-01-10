@@ -60,15 +60,7 @@
             <!-- Login/Register Section (shown when not authenticated) -->
             <div id="authSection" class="w-full">
                 <!-- Login Form -->
-                <div id="loginForm" class="glass-effect rounded-2xl shadow-lg p-8">
-                    <div class="text-center mb-8">
-                        <div class="inline-block bg-[#2B7EC5] rounded-full p-4 mb-4">
-                            <span class="text-4xl">🏊</span>
-                        </div>
-                        <h2 class="text-3xl font-bold text-[#001A72] mb-2">Bienvenido de Vuelta</h2>
-                        <p class="text-gray-600">Inicia sesión en tu cuenta</p>
-                    </div>
-                    
+                <div id="loginForm" class="glass-effect rounded-2xl shadow-lg p-8 hidden">
                     <form onsubmit="handleLogin(event)" class="space-y-5">
                         <div>
                             <label for="loginEmail" class="form-label">Dirección de Correo</label>
@@ -83,42 +75,45 @@
                     
                     <p class="text-center text-gray-600 mt-6">
                         ¿No tienes cuenta? 
-                        <span class="link-text" onclick="switchToRegister(event)">Crea una</span>
+                        <span class="link-text" onclick="switchToRegister(event)">Crear una cuenta</span>
                     </p>
                 </div>
 
                 <!-- Register Form -->
-                <div id="registerForm" class="glass-effect rounded-2xl shadow-lg p-8 hidden">
-                    <div class="text-center mb-8">
-                        <div class="inline-block bg-[#2B7EC5] rounded-full p-4 mb-4">
-                            <span class="text-4xl">✨</span>
+                <div id="registerForm" class="glass-effect rounded-2xl shadow-lg p-0">
+                    <!-- Banner/Header -->
+                    <div class="h-28 w-full rounded-t-2xl bg-gradient-to-r from-[#001A72] to-[#2B7EC5]"></div>
+                    
+                    <div class="p-8">
+                        <div class="mb-6">
+                            <h2 class="text-2xl font-bold text-[#001A72] mb-2">Registro de Dispositivo</h2>
+                            <p class="text-gray-600">Registra tu controlador y crea tu cuenta.</p>
                         </div>
-                        <h2 class="text-3xl font-bold text-[#001A72] mb-2">Comenzar</h2>
-                        <p class="text-gray-600">Crea tu cuenta de control de piscina</p>
+                        
+                        <form onsubmit="handleRegister(event)" class="space-y-5">
+                            <div>
+                                <label for="registerDeviceId" class="form-label">ID del Dispositivo</label>
+                                <input type="text" id="registerDeviceId" class="form-input" placeholder="ESP-ABC123" pattern="^ESP-[A-Fa-f0-9]{6}$" title="Formato: ESP-XXXXXX (6 caracteres hexadecimales)" required>
+                            </div>
+                            <div>
+                                <label for="registerEmail" class="form-label">Dirección de Correo</label>
+                                <input type="email" id="registerEmail" class="form-input" placeholder="tumail@example.com" required>
+                            </div>
+                            <div>
+                                <label for="registerPassword" class="form-label">Contraseña</label>
+                                <div class="space-y-2">
+                                    <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 8 caracteres" minlength="8" required>
+                                    <p class="text-xs text-gray-500">Se recomienda mayúsculas, minúsculas, números y símbolos</p>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full primary-btn">Crear Cuenta</button>
+                        </form>
+                        
+                        <p class="text-center text-gray-600 mt-6">
+                            ¿Ya tienes cuenta? 
+                            <span class="link-text" onclick="switchToLogin(event)">Inicia sesión</span>
+                        </p>
                     </div>
-                    
-                    <form onsubmit="handleRegister(event)" class="space-y-5">
-                        <div>
-                            <label for="registerEmail" class="form-label">Dirección de Correo</label>
-                            <input type="email" id="registerEmail" class="form-input" placeholder="tumail@example.com" required>
-                        </div>
-                        <div>
-                            <label for="registerPassword" class="form-label">Contraseña</label>
-                            <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 8 caracteres" minlength="8" required>
-                            <p class="text-xs text-gray-500 mt-1">Se recomienda mayúsculas, minúsculas, números y símbolos</p>
-                        </div>
-                        <div>
-                            <label for="registerDeviceId" class="form-label">ID del Dispositivo</label>
-                            <input type="text" id="registerDeviceId" class="form-input" placeholder="ESP-ABC123" pattern="^ESP-[A-Fa-f0-9]{6}$" title="Formato: ESP-XXXXXX (6 caracteres hexadecimales)" required>
-                            <p class="text-xs text-gray-500 mt-1">De tu dispositivo controlador de piscina</p>
-                        </div>
-                        <button type="submit" class="w-full primary-btn">Crear Cuenta</button>
-                    </form>
-                    
-                    <p class="text-center text-gray-600 mt-6">
-                        ¿Ya tienes cuenta? 
-                        <span class="link-text" onclick="switchToLogin(event)">Inicia sesión</span>
-                    </p>
                 </div>
 
                 <!-- Message Alert -->
