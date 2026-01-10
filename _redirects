@@ -1,2 +1,4 @@
+/auth  /auth/  301
+/auth/  /auth/index.html  200
 /auth/*  /auth/:splat  200
 /*  /index.html  200
