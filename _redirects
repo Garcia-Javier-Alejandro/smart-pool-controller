@@ -1,2 +1,2 @@
-/dashboard/*  /dashboard/:splat  200
+/auth/*  /auth/:splat  200
 /*  /index.html  200
