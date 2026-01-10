@@ -1,6 +1,5 @@
 // API Configuration
 const API_BASE_URL = 'https://smart-pool-controller.pages.dev';
-const CACHE_VERSION = '966625e'; // Force reload
 
 // Utility Functions
 function showAuthSection() {
