@@ -3,17 +3,11 @@ compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "."
 
-# D1 Database binding
-# Professional setup: Manage D1 bindings in Cloudflare Pages dashboard
-# Pages → Your Project → Settings → Functions → D1 Databases
-# Add binding with Variable name: DB and select your D1 database.
-#
-# If you prefer repo-driven bindings, set the database UUID here:
-#
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "smart-pool-controller-db"
-# database_id = "<YOUR_D1_DATABASE_UUID>"
+# D1 Database binding (repo-managed)
+[[d1_databases]]
+binding = "DB"
+database_name = "smart-pool-controller-db"
+database_id = "08ab8aaa-7f53-4c69-8985-e51270308852"
 
 # Environment Variables
 [vars]
