@@ -71,7 +71,7 @@ function clearValidationErrors(formType) {
 }
 
 function showValidationError(fieldId) {
-    document.getElementById(fieldId + 'Error').classList.remove('hidden');
+    document.getElementById(fieldId + 'Error')?.classList.remove('hidden');
 }
 
 function copyToClipboard(elementId) {
