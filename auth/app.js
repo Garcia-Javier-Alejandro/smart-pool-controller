@@ -48,6 +48,31 @@ function showMessage(text, type) {
     }
 }
 
+// Validation Functions
+function validateDeviceId(value) {
+    const pattern = /^[A-Z0-9]{3}-[A-Z0-9]{6}$/;
+    return pattern.test(value);
+}
+
+function validateEmail(value) {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(value);
+}
+
+function validatePassword(value) {
+    return value.length >= 8;
+}
+
+function clearValidationErrors() {
+    document.getElementById('deviceIdError').classList.add('hidden');
+    document.getElementById('emailError').classList.add('hidden');
+    document.getElementById('passwordError').classList.add('hidden');
+}
+
+function showValidationError(fieldId) {
+    document.getElementById(fieldId + 'Error').classList.remove('hidden');
+}
+
 function copyToClipboard(elementId) {
     const element = document.getElementById(elementId);
     const text = element.value;
@@ -109,6 +134,28 @@ async function handleRegister(event) {
     const email = document.getElementById('registerEmail').value;
     const password = document.getElementById('registerPassword').value;
     const deviceId = document.getElementById('registerDeviceId').value;
+
+    // Clear previous errors
+    clearValidationErrors();
+
+    // Validate inputs
+    let hasErrors = false;
+    if (!validateDeviceId(deviceId)) {
+        showValidationError('deviceId');
+        hasErrors = true;
+    }
+    if (!validateEmail(email)) {
+        showValidationError('email');
+        hasErrors = true;
+    }
+    if (!validatePassword(password)) {
+        showValidationError('password');
+        hasErrors = true;
+    }
+
+    if (hasErrors) {
+        return;
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/register`, {

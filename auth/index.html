@@ -47,16 +47,17 @@
                     </div>
 
                     <!-- Form -->
-                    <form onsubmit="handleRegister(event)" class="space-y-4 w-full">
+                    <form onsubmit="handleRegister(event)" class="space-y-4 w-full" novalidate>
                         <!-- Device ID -->
                         <div class="w-full">
-                            <label for="registerDeviceId" class="block text-sm font-semibold text-slate-700 mb-2">ID del Dispositivo</label>
+                            <div class="flex items-baseline justify-between mb-2">
+                                <label for="registerDeviceId" class="text-sm font-semibold text-slate-700">ID del Dispositivo</label>
+                                <span id="deviceIdError" class="text-xs text-red-600 font-semibold hidden">Formato: XXX-XXXXXX</span>
+                            </div>
                             <input 
                                 type="text" 
                                 id="registerDeviceId" 
                                 placeholder="ESP-ABC123" 
-                                pattern="^ESP-[A-Fa-f0-9]{6}$" 
-                                title="Formato: ESP-XXXXXX (6 caracteres hexadecimales)" 
                                 required
                                 class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all"
                             >
@@ -64,11 +65,14 @@
 
                         <!-- Email -->
                         <div class="w-full">
-                            <label for="registerEmail" class="block text-sm font-semibold text-slate-700 mb-2">Dirección de Correo</label>
+                            <div class="flex items-baseline justify-between mb-2">
+                                <label for="registerEmail" class="text-sm font-semibold text-slate-700">Dirección de Correo</label>
+                                <span id="emailError" class="text-xs text-red-600 font-semibold hidden">Email inválido</span>
+                            </div>
                             <input 
                                 type="email" 
                                 id="registerEmail" 
-                                placeholder="tumail@example.com" 
+                                placeholder="mail@ejemplo.com" 
                                 required
                                 class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all"
                             >
@@ -76,12 +80,14 @@
 
                         <!-- Password -->
                         <div class="w-full">
-                            <label for="registerPassword" class="block text-sm font-semibold text-slate-700 mb-2">Contraseña</label>
+                            <div class="flex items-baseline justify-between mb-2">
+                                <label for="registerPassword" class="text-sm font-semibold text-slate-700">Contraseña</label>
+                                <span id="passwordError" class="text-xs text-red-600 font-semibold hidden">Mínimo 8 caracteres</span>
+                            </div>
                             <input 
                                 type="password" 
                                 id="registerPassword" 
                                 placeholder="Mínimo 8 caracteres" 
-                                minlength="8" 
                                 required
                                 class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 outline-none transition-all"
                             >
