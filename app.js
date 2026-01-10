@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'https://iot-5wo.pages.dev'; // Your existing Pages Functions deployment
+const API_BASE_URL = 'https://smart-pool-controller.pages.dev';
 
 // Utility Functions
 function showAuthSection() {
