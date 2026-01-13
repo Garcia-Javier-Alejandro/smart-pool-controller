@@ -1,169 +1,163 @@
-# Smart Pool Controller (Multi-User)
+# Smart Pool Controller
 
-Multi-user pool controller stack: Cloudflare Pages (SPA) + Cloudflare Pages Functions + D1 database + ESP32 firmware + HiveMQ MQTT. Users authenticate, receive per-user MQTT credentials and topic namespaces, and control one or more ESP32 pool controllers through the web dashboard.
+## 🏊 Control Your Pool Remotely
 
-**Status**: ✅ Production-ready multi-user system  
-**Last Updated**: January 9, 2026  
-**License**: CC BY-NC 4.0 (non-commercial use)
+**Smart Pool Controller** is an easy-to-use system that lets you manage your pool from anywhere. Switch your pump on and off, control water flow valves, set timers, and schedule programs—all from your smartphone or computer.
 
----
+### What You Can Do
 
-## 📦 What’s Included
+✨ **Instant Control**
+- Turn pump on/off with a single tap
+- Switch between water modes (cascade vs jets) instantly
+- View real-time pump and valve status
 
-- Frontend SPA (index.html, app.js, styles.css, _redirects) served by Cloudflare Pages
-- Auth + device APIs via Cloudflare Pages Functions
-- D1 database schema (users, mqtt_credentials, devices, sessions) for multi-user isolation
-- MQTT broker integration (tested with HiveMQ Cloud) with per-user credentials and topic prefixes
-- ESP32 firmware (PlatformIO) for pump/valve control, temperature sensing, timer/program logic
-- CC BY-NC 4.0 license (non-commercial)
+⏱️ **Smart Scheduling**
+- Create up to 3 daily programs (e.g., filter at 6 AM, jets at 3 PM)
+- Set timers for timed watering or circulation
+- Program runs automatically based on your schedule
 
----
+📊 **Track Your Pool**
+- See temperature readings in real-time
+- View event history (when pump started/stopped)
+- Monitor WiFi connection status
 
-## 🏗️ Architecture
-
-- **SPA**: Served from root; `_redirects` sends all routes to index.html
-- **APIs (Functions)**:
-  - [functions/api/auth/register.js](functions/api/auth/register.js)
-  - [functions/api/auth/login.js](functions/api/auth/login.js)
-  - [functions/api/auth/logout.js](functions/api/auth/logout.js)
-  - [functions/api/auth/mqtt-credentials.js](functions/api/auth/mqtt-credentials.js)
-  - [functions/api/event.js](functions/api/event.js)
-  - [functions/api/history.js](functions/api/history.js)
-- **Auth core**: [functions/_shared/multiUserAuth.js](functions/_shared/multiUserAuth.js), [functions/_shared/auth.js](functions/_shared/auth.js)
-- **Database (D1)**: migrations for users, mqtt_credentials, devices, sessions in [migrations](migrations)
-- **MQTT**: Per-user credentials + topic namespace; broker: HiveMQ Cloud (or compatible)
-- **Firmware**: PlatformIO project in [firmware](firmware) (GPIO control, MQTT client, timers, DS18B20)
-
-Data flow (multi-user):
-1) User registers/logs in → receives JWT
-2) Dashboard calls `/api/auth/mqtt-credentials` → gets mqttUser, mqttPass, topicPrefix, broker URL
-3) Dashboard connects to MQTT over WSS using those credentials
-4) Commands/state flow on `topicPrefix/...` topics to the user’s devices
-5) Events/history stored via Functions + D1 (extensible; placeholders provided)
+🔒 **Multi-User & Secure**
+- Each family member gets their own login account
+- Access control ensures privacy
+- All communication is encrypted
 
 ---
 
-## 🚀 Quickstart (Multi-User)
+## 🔧 How It Works
 
-**Prereqs**: Node 18+, `wrangler` CLI, Cloudflare account, MQTT broker.
+The system connects a small ESP32 microcontroller (installed in your pool equipment) to the internet via WiFi. This device communicates with our cloud backend, which serves a mobile-friendly web dashboard. You control everything through the dashboard—no app installation needed, just open it in your browser.
 
-1) Clone the repo
-2) Create the D1 database and run migrations
-3) Set required secrets (JWT, broker URL, etc.)
-4) Run locally: `npm run dev`
-5) Deploy: `npm run deploy`
-
-Detailed steps and troubleshooting: see [docs/SETUP.md](docs/SETUP.md).
+**Key Components:**
+- **Dashboard** - Web app you use to control your pool (works on phone, tablet, computer)
+- **Cloud Backend** - Secure server that handles accounts, device communication, and schedules
+- **ESP32 Controller** - Small computer that directly controls your pump and valves
+- **MQTT Network** - Secure messaging system that keeps your dashboard and devices in sync
 
 ---
 
-## 🔌 API Surface (Functions)
+## ✨ Features
 
-| Endpoint | Method | Auth | Purpose |
-|----------|--------|------|---------|
-| `/api/auth/register` | POST | None | Create user account |
-| `/api/auth/login` | POST | None | Issue JWT + session |
-| `/api/auth/logout` | POST | Bearer | Revoke session |
-| `/api/auth/mqtt-credentials` | GET | Bearer | Return per-user MQTT creds + topicPrefix |
-| `/api/event` | POST | Bearer/API key | Log device events (extend to store in D1/KV) |
-| `/api/history` | GET | Bearer/API key | Fetch history (placeholder; wire to D1/KV) |
-
-`mqtt-credentials` response (example):
-```json
-{
-  "mqttUser": "u_abc123",
-  "mqttPass": "s3cr3t",
-  "topicPrefix": "users/abc123/devices/pool-01",
-  "broker": "wss://<your-hivemq-host>:8884/mqtt",
-  "expiresAt": 1735689600000
-}
-```
+- 🎯 **One-tap control** - Pump and valve switching in real-time
+- 📅 **Weekly schedules** - Set up to 3 automated programs per week
+- ⏰ **Smart timers** - Countdown timers for temporary operations
+- 🌡️ **Temperature monitoring** - Track water temperature with DS18B20 sensor
+- 📱 **Mobile-ready** - Responsive design works on phones, tablets, and desktops
+- 🔐 **Multi-account support** - Family members can each have their own login
+- 📊 **Event history** - See when and how often your pump ran
+- ☁️ **Cloud-based** - Accessible from anywhere with internet
+- 💾 **Automatic backups** - Your schedules are saved in the cloud
 
 ---
 
-## 📡 MQTT Topic Model
+## 🚀 Getting Started
 
-All topics are namespaced per user/device using `topicPrefix` from `mqtt-credentials`:
+### For End Users (Just Want to Use It)
 
-| Topic | Direction | Description |
-|-------|-----------|-------------|
-| `{topicPrefix}/pump/set` | → device | Pump command (`ON`/`OFF`/`TOGGLE`) |
-| `{topicPrefix}/pump/state` | ← device | Pump state (`ON`/`OFF`) |
-| `{topicPrefix}/valve/set` | → device | Valve mode (`1`/`2`/`TOGGLE`) |
-| `{topicPrefix}/valve/state` | ← device | Valve mode (`1`/`2`) |
-| `{topicPrefix}/timer/set` | → device | JSON timer command |
-| `{topicPrefix}/timer/state` | ← device | JSON timer status |
-| `{topicPrefix}/temperature/state` | ← device | Water temp (°C) |
-| `{topicPrefix}/wifi/state` | ← device | WiFi status JSON |
+1. **Access the Dashboard**: Open the provided URL in your browser
+2. **Register/Login**: Create an account or log in with your credentials
+3. **Connect Your Device**: Follow BLE provisioning to connect your ESP32 controller to WiFi
+4. **Start Controlling**: Use the dashboard to control your pump and valves
 
-Align `deviceId`/topic prefix in firmware config with the prefix returned by the backend for that device.
+📖 Full user guide: See [docs/DEVICE_PROVISIONING.md](docs/DEVICE_PROVISIONING.md)
 
----
+### For Developers (Want to Deploy/Modify)
 
-## 🛠️ Firmware (ESP32)
+This is a complete full-stack solution built on modern cloud infrastructure:
+- **Frontend**: Cloudflare Pages (SPA) - serves your dashboard
+- **Backend**: Cloudflare Pages Functions - handles accounts and device communication  
+- **Database**: Cloudflare D1 - stores user accounts and history
+- **Messaging**: HiveMQ MQTT broker - real-time device communication
+- **Hardware**: ESP32 microcontroller running custom firmware
 
-- Location: [firmware](firmware)
-- Configure credentials in [firmware/include/secrets.h](firmware/include/secrets.h) (not committed); use the example template
-- Set MQTT topics/device ID in [firmware/include/config.h](firmware/include/config.h)
-- Build/flash: `cd firmware && pio run --target upload`
-- Hardware: pump relay, valve relay (NC/NO), DS18B20 temperature sensor; GPIO mappings in config.h
+**Setup Instructions**: See [docs/SETUP.md](docs/SETUP.md) for detailed deployment guide.
 
 ---
 
-## 🗄️ Database
+## 📋 System Status
 
-- Migrations: [migrations](migrations)
-  - `0001_create_users_table.sql`
-  - `0002_create_mqtt_credentials_table.sql`
-  - `0003_create_devices_table.sql`
-  - `0004_create_sessions_table.sql`
-- Scripts (see [package.json](package.json)):
-  - `npm run db:create` (optional helper)
-  - `npm run db:migrate:local`
-  - `npm run db:migrate:remote`
+- **Status**: ✅ Production-ready
+- **Users**: Multi-user with per-account login
+- **License**: CC BY-NC 4.0 (non-commercial use)
+- **Last Updated**: January 12, 2026
 
 ---
 
-## 🛡️ Security Notes
+## 🔍 Technical Overview
 
-- JWT-based sessions; rotate `JWT_SECRET` periodically
-- Per-user MQTT credentials and topic namespaces to isolate tenants
-- Use TLS (WSS 8884) to the MQTT broker
-- Do not commit `secrets.h` or any generated credentials
-- Optional API key support for device-to-cloud calls
+For developers interested in the architecture:
+
+### Components
+
+- **Frontend SPA** ([index.html](index.html), [js/app.js](js/app.js)) - Responsive dashboard
+- **Authentication** - User registration, login, session management
+- **Device APIs** - Register devices, control operations, fetch history
+- **Database** - Multi-user isolation with D1 (users, devices, sessions, events)
+- **MQTT Integration** - Per-user credentials, real-time state sync
+- **ESP32 Firmware** - GPIO control, sensor reading, WiFi provisioning
+
+### APIs (Cloud Functions)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/auth/register` | Create user account |
+| `/api/auth/login` | User authentication |
+| `/api/auth/mqtt-credentials` | Get device connection details |
+| `/api/event` | Log device events |
+| `/api/history` | Retrieve event history |
+
+### Data Model
+
+Each user has:
+- Login credentials (email/password)
+- One or more registered ESP32 devices
+- Unique MQTT credentials for secure device communication
+- Automated program schedules
+
+### MQTT Topics
+
+Commands and state flow on topic paths like:
+- `devices/{deviceId}/pump/set` → Device
+- `devices/{deviceId}/pump/state` ← Device
+- `devices/{deviceId}/valve/set` → Device
+- `devices/{deviceId}/timer/set` → Device
 
 ---
 
-## 📂 Key Files
+## 📚 Documentation
 
-- Frontend: [index.html](index.html), [app.js](app.js), [css/styles.css](css/styles.css), [_redirects](_redirects)
-- Backend functions: [functions/api](functions/api)
-- Auth core: [functions/_shared](functions/_shared)
-- Firmware: [firmware/src/main.cpp](firmware/src/main.cpp), [firmware/include/config.h](firmware/include/config.h)
-- Database: [migrations](migrations)
-- Config: [wrangler.toml](wrangler.toml), [package.json](package.json)
-- License: [LICENSE](LICENSE) (CC BY-NC 4.0)
+- **[docs/SETUP.md](docs/SETUP.md)** - Complete installation & deployment guide
+- **[docs/DEVICE_PROVISIONING.md](docs/DEVICE_PROVISIONING.md)** - WiFi setup & device pairing
+- **[docs/TELEMETRY_STRATEGY.md](docs/TELEMETRY_STRATEGY.md)** - Data storage & scalability
+- **[MULTI_USER_ARCHITECTURE.md](MULTI_USER_ARCHITECTURE.md)** - System design & security
+- **[WIRING_DIAGRAM.md](WIRING_DIAGRAM.md)** - ESP32 hardware connections
 
----
+### Key Files
 
-## 📚 Docs
-
-- Setup Guide: [docs/SETUP.md](docs/SETUP.md)
-- Device Provisioning: [docs/DEVICE_PROVISIONING.md](docs/DEVICE_PROVISIONING.md)
-- Telemetry Strategy: [docs/TELEMETRY_STRATEGY.md](docs/TELEMETRY_STRATEGY.md)
-- Wiring Diagram: [WIRING_DIAGRAM.md](WIRING_DIAGRAM.md)
+- **Frontend**: [index.html](index.html), [js/app.js](js/app.js), [css/styles.css](css/styles.css)
+- **Backend Functions**: [functions/api](functions/api), [functions/_shared](functions/_shared)
+- **Firmware**: [firmware/src/main.cpp](firmware/src/main.cpp), [firmware/include/config.h](firmware/include/config.h)
+- **Database**: [migrations](migrations)
+- **Configuration**: [wrangler.toml](wrangler.toml), [package.json](package.json)
 
 ---
 
-## 📜 License
+## 📄 License
 
-Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). Non-commercial use only.
+CC BY-NC 4.0 (Non-Commercial) - You can use, modify, and share this for non-commercial purposes. For commercial use, please contact the author.
+
+See [LICENSE](LICENSE) for full details.
 
 ---
 
-## 💬 Support
+## 💬 Questions?
 
-- Use GitHub issues with details (browser console, function logs, firmware serial output)
-- Verify D1 migrations and secrets are configured before filing runtime issues
+- Check the [docs](docs) folder for detailed guides
+- Review code comments for implementation details
+- See [WIRING_DIAGRAM.md](WIRING_DIAGRAM.md) for hardware setup
 
-**Built with ☕**
+**Built with ☕ in 2026**
