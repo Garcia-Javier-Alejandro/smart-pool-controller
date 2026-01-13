@@ -1,6 +1,14 @@
-> Moved: See detailed setup guide in [docs/SETUP.md](docs/SETUP.md).
+# Phase 2: Multi-Tenant Architecture - Setup Guide
 
-This file has been relocated to the `docs/` folder to keep `README.md` concise.
+## Overview
+
+This guide covers the setup and deployment of the multi-tenant authentication system for the Smart Pool Controller.
+
+## Prerequisites
+
+- Node.js 18+ installed
+- Cloudflare account
+- Wrangler CLI installed globally or via npm
 
 ## Initial Setup
 
@@ -30,6 +38,13 @@ database_id = "YOUR_DATABASE_ID_HERE"  # Replace with actual ID
 ```
 
 ### 3. Run Database Migrations
+
+The migrations will create these tables:
+- `users` - User accounts
+- `mqtt_credentials` - Per-user MQTT credentials
+- `devices` - Registered devices
+- `sessions` - Active login sessions
+- `events` - Telemetry data (pump/valve state changes)
 
 **Local development:**
 ```bash
@@ -136,8 +151,6 @@ wrangler d1 export smart-pool-controller-db --remote --output backup.sql
 npm run deploy
 ```
 
-Note: Detailed deployment steps have moved to [docs/SETUP.md](docs/SETUP.md).
-
 ### Post-Deployment
 
 1. Run remote migrations (if not done):
@@ -167,8 +180,8 @@ Note: Detailed deployment steps have moved to [docs/SETUP.md](docs/SETUP.md).
 
 | Endpoint | Method | Auth Required | Description |
 |----------|--------|---------------|-------------|
-| `/api/event` | POST | API Key | Record device events (telemetry) |
-| `/api/history` | GET | API Key | Retrieve historical events |
+| `/api/event` | POST | API Key/JWT | Record device events (telemetry) |
+| `/api/history` | GET | API Key/JWT | Retrieve historical events |
 
 ## Database Schema
 
@@ -201,7 +214,7 @@ See `migrations/` directory for full schema.
 - Stored in sessions table (can be invalidated)
 - Include user info and device_id
 
-## Telemetry Strategy
+## Telemetry Strategy (Overview)
 
 **D1 Database (Low-write):**
 - User accounts
@@ -214,7 +227,7 @@ See `migrations/` directory for full schema.
 - Time-series data
 - Logs
 
-Consider migrating `/api/event` to use Cloudflare Workers KV, Durable Objects, or external time-series DB for high-frequency writes.
+See the detailed design in `docs/TELEMETRY_STRATEGY.md`.
 
 ## Troubleshooting
 

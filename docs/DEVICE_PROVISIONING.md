@@ -1,6 +1,10 @@
-> Moved: See provisioning guide in [docs/DEVICE_PROVISIONING.md](docs/DEVICE_PROVISIONING.md).
+# Device WiFi Provisioning Guide
 
-This file has been relocated to the `docs/` folder to keep `README.md` concise.
+This guide covers WiFi provisioning for the ESP32 Pool Controller using two methods:
+- **BLE Provisioning** (Android, Windows, macOS)
+- **WiFiManager Captive Portal** (iOS, or any device)
+
+## Quick Reference
 
 | Device Type | Method | Browser | Setup Time |
 |-------------|--------|---------|-----------|
@@ -321,7 +325,7 @@ If you want to switch back to BLE provisioning:
 
 ---
 
-## � Power Failure Recovery
+## Power Failure Recovery
 
 The ESP32 is designed to automatically recover from power failures without needing re-provisioning:
 
@@ -359,7 +363,7 @@ Total recovery time: 1-2 minutes (automatic)
 
 ---
 
-## �🚀 Which Method Should I Use?
+## Which Method Should I Use?
 
 ### Choose **BLE Provisioning** if:
 - ✅ You have an Android phone or Windows/macOS device

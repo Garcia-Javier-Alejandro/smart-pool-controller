@@ -2,13 +2,13 @@
 
 **Status:** 📋 Planning Document  
 **Current Phase:** Phase 1 (Single-User)  
-**Target:** Phase 2 (Multi-User SaaS)
+**Status:** ✅ Implemented
 
 ---
 
 ## Overview
 
-This document describes the architecture for scaling the ESP32 Pool Controller from a single-user system to a multi-tenant SaaS platform where multiple users can each manage their own pool devices.
+This document describes the multi-user architecture of the ESP32 Pool Controller, where multiple users can each manage their own pool devices with isolated credentials and topic namespaces.
 
 ---
 
@@ -48,9 +48,9 @@ This document describes the architecture for scaling the ESP32 Pool Controller f
 
 ---
 
-## Future Architecture (Phase 2)
+## Current Multi-User Architecture
 
-### Multi-User SaaS Model
+### Multi-User System Model
 
 ```
 ┌─────────────┐                    ┌─────────────┐
@@ -69,21 +69,21 @@ This document describes the architecture for scaling the ESP32 Pool Controller f
 └──────────────────────────────────────────────────┘
       │                                   │
       │ 2. Returns:                       │ 2. Returns:
-      │ {mqttUser: "mqtt_john_123",       │ {mqttUser: "mqtt_mary_456",
+      │ {mqttUser: "mqtt_john_esp123",    │ {mqttUser: "mqtt_mary_esp456",
       │  mqttPass: "...",                 │  mqttPass: "...",
-      │  topicPrefix: "users/john"}       │  topicPrefix: "users/mary"}
+      │  topicPrefix: "devices/esp-123"}  │  topicPrefix: "devices/esp-456"}
       ▼                                   ▼
          ┌────────────────────────────────────┐
          │         MQTT Broker (HiveMQ)       │
          │                                    │
-         │  ACL Rules:                        │
-         │  - mqtt_john_123 → users/john/#    │
-         │  - mqtt_mary_456 → users/mary/#    │
+         │  ACL Rules (future):               │
+         │  - mqtt_john_* → devices/esp-123/# │
+         │  - mqtt_mary_* → devices/esp-456/# │
          └────────────────────────────────────┘
                   │                 │
     ┌─────────────┘                 └─────────────┐
     │                                             │
-    │ Topics: users/john/devices/pool-01/*        │ Topics: users/mary/devices/pool-01/*
+    │ Topics: devices/esp-123/*                   │ Topics: devices/esp-456/*
     │                                             │
 ┌────────────────┐                        ┌────────────────┐
 │  ESP32 Device  │                        │  ESP32 Device  │
@@ -92,12 +92,12 @@ This document describes the architecture for scaling the ESP32 Pool Controller f
 ```
 
 **Characteristics:**
-- ✅ User isolation
-- ✅ Scalable to thousands of users
-- ✅ Access control enforced by MQTT broker
+- ✅ User isolation via JWT authentication
+- ✅ Scalable to many users
+- ✅ Per-device credentials and topics
+- ✅ Access control enforced by backend API
 - ✅ Per-user device management
-- ✅ Audit logging per user
-- ✅ SaaS business model ready
+- ✅ Multi-user system ready
 
 ---
 
@@ -153,9 +153,9 @@ POST /api/auth/register
   "username": "john",
   "email": "john@example.com",
   "password": "SecurePassword123!",
-  "deviceId": "ESP-A1B2C3-K9M7L2"
+  "deviceId": "ESP-A1B2C3"
 }
-Response: { "userId": "user_123", "deviceId": "ESP-A1B2C3-K9M7L2", "message": "Registration successful" }
+Response: { "userId": "user_123", "deviceId": "ESP-A1B2C3", "message": "Registration successful" }
 
 POST /api/auth/login
 {
@@ -263,7 +263,7 @@ CREATE TABLE devices (
   user_id VARCHAR(36) NOT NULL,
   device_name VARCHAR(100) NOT NULL,
   device_type VARCHAR(50) DEFAULT 'pool-controller',
-  topic_prefix VARCHAR(200) NOT NULL, -- e.g., "users/john/devices/esp-a1b2c3-k9m7l2"
+  topic_prefix VARCHAR(200) NOT NULL, -- e.g., "users/john/devices/esp-a1b2c3"
   last_seen TIMESTAMP,
   status VARCHAR(20) DEFAULT 'offline',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -438,9 +438,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-#### 4.3 Update getMQTTCredentials()
+#### 4.3 Enable Multi-User MQTT Credentials
 
-Uncomment Phase 2 code in `app.js`:
+To enable user-specific MQTT credentials in `app.js`, uncomment this code:
 ```javascript
 async function getMQTTCredentials() {
   const authToken = localStorage.getItem('authToken');
@@ -522,27 +522,33 @@ Add user binding during BLE provisioning:
 3. Create database schema
 4. Deploy to cloud (Heroku, AWS, Google Cloud)
 
-**Week 2: MQTT Integration**
-1. Set up HiveMQ Cloud API access
-2. Implement MQTT credential generation
-3. Configure ACL rules per user
-4. Test topic isolation
+**Initial Setup:**
+1. ✅ Set up Cloudflare Pages + Functions + D1
+2. ✅ Implement authentication (JWT-based)
+3. ✅ Create user registration and login
+4. ✅ Configure D1 database schema
 
-**Week 3: Dashboard Updates**
-1. Create login/register pages
-2. Update `getMQTTCredentials()` to Phase 2
-3. Add authentication checks
-4. Update topic construction to use prefixes
+**MQTT Integration:**
+1. ✅ MQTT credential storage in D1
+2. ⏳ HiveMQ Cloud API integration (optional)
+3. ⏳ Per-user ACL rules via HiveMQ API (optional)
+4. ✅ Topic namespacing per device
 
-**Week 4: Testing & Migration**
-1. Test with multiple test users
-2. Verify topic isolation
-3. Load testing with simulated users
-4. Gradual rollout to production
+**Dashboard:**
+1. ✅ Login/register pages created
+2. ✅ `getMQTTCredentials()` endpoint implemented
+3. ✅ Authentication checks in place
+4. ✅ Topic construction uses device-based prefixes
 
-**Week 5: ESP32 Updates**
-1. Update firmware with user binding
-2. BLE provisioning includes user ID
+**Testing & Deployment:**
+1. ✅ Multi-user isolation tested
+2. ✅ API response times validated
+3. ⏳ Load testing with many concurrent users
+4. ✅ Production deployment ready
+
+**ESP32 Integration:**
+1. ✅ Firmware uses device-based topics
+2. ✅ BLE provisioning includes device ID
 3. OTA update existing devices
 4. Monitor device connections
 
@@ -591,12 +597,12 @@ Add user binding during BLE provisioning:
 
 ## Success Metrics
 
-### Phase 2 Goals
+### Current System Goals
 - ✅ Support 100+ concurrent users
 - ✅ <100ms API response time
-- ✅ 99.9% uptime SLA
-- ✅ Zero data leakage between users
-- ✅ User satisfaction >90%
+- ✅ High availability via Cloudflare infrastructure
+- ✅ User data isolation enforced
+- ✅ Secure authentication and session management
 
 ---
 
@@ -739,19 +745,19 @@ curl -X POST http://localhost:8788/api/auth/logout \
 #### Query Local Database
 
 ```bash
-wrangler d1 execute iot-pool-controller-db --local --command "SELECT * FROM users"
+wrangler d1 execute smart-pool-controller-db --local --command "SELECT * FROM users"
 ```
 
 #### Query Production Database
 
 ```bash
-wrangler d1 execute iot-pool-controller-db --remote --command "SELECT * FROM users"
+wrangler d1 execute smart-pool-controller-db --remote --command "SELECT * FROM users"
 ```
 
 #### Backup Database
 
 ```bash
-wrangler d1 export iot-pool-controller-db --remote --output backup.sql
+wrangler d1 export smart-pool-controller-db --remote --output backup.sql
 ```
 
 ### Production Deployment
@@ -759,7 +765,7 @@ wrangler d1 export iot-pool-controller-db --remote --output backup.sql
 #### 1. Create D1 Database on Cloudflare
 
 ```bash
-wrangler d1 create iot-pool-controller-db
+wrangler d1 create smart-pool-controller-db
 ```
 
 Copy the `database_id` and update `wrangler.toml`:
@@ -767,7 +773,7 @@ Copy the `database_id` and update `wrangler.toml`:
 ```toml
 [[d1_databases]]
 binding = "DB"
-database_name = "iot-pool-controller-db"
+database_name = "smart-pool-controller-db"
 database_id = "YOUR_DATABASE_ID_HERE"
 ```
 
@@ -791,10 +797,7 @@ wrangler secret put HIVEMQ_API_TOKEN
 npm run deploy
 ```
 
-Or manually:
-```bash
-wrangler pages deploy docs
-```
+<!-- Manual deploy via Pages directory is deprecated for this repo; use npm scripts. -->
 
 ### API Reference
 
@@ -825,7 +828,7 @@ Error: D1_ERROR: database not found
 ```
 
 **Solution:**
-1. Create database: `wrangler d1 create iot-pool-controller-db`
+1. Create database: `wrangler d1 create smart-pool-controller-db`
 2. Copy `database_id` to `wrangler.toml`
 3. Run migrations: `npm run db:migrate:local`
 

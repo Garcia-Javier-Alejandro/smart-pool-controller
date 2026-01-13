@@ -1,12 +1,17 @@
-> Moved: See full telemetry strategy in [docs/TELEMETRY_STRATEGY.md](docs/TELEMETRY_STRATEGY.md).
+# Telemetry Data Migration Strategy
 
-This file has been relocated to the `docs/` folder and updated to clarify that telemetry migration is planned future work.
+> Status: Current implementation uses D1 with rate limiting optimizations. Migration paths below are for future scalability if needed.
 
-The existing `/api/event` and `/api/history` endpoints use D1 database to store high-frequency telemetry data (pump state changes, valve states, etc.).
+## Current Implementation
 
-**Problem:** D1 is optimized for low-write, high-read data. High-frequency telemetry writes can hit rate limits.
+The `/api/event` and `/api/history` endpoints use D1 database to store telemetry data (pump state changes, valve states, etc.) with smart rate limiting:
+- Events only recorded on actual state changes (not continuous polling)
+- 60-day retention with automatic cleanup
+- Multi-user isolation via deviceId
 
-## Phase 2 Strategy
+**Current approach works well for typical usage.** Consider migration only if scaling to many concurrent users.
+
+## Future Optimization Options
 
 ### Option 1: Keep D1 for Low-Frequency Events (Recommended for MVP)
 
@@ -61,30 +66,30 @@ The existing `/api/event` and `/api/history` endpoints use D1 database to store 
 - ⚠️ Additional infrastructure cost
 - ⚠️ More complex deployment
 
-## Recommendation for Phase 2
+## Recommendation
 
-**Start with Option 1** - keep using D1 but optimize:
+**Current implementation (already optimized):**
 
-1. **Device-side:** Only send events on state changes (not periodic polling)
-2. **API-side:** Implement rate limiting per device (max 1 write/second)
-3. **Frontend:** Get real-time state from MQTT, use DB only for history charts
-4. **Cleanup:** Retain only 60 days of raw events (already implemented)
+1. **Device-side:** ✅ Only sends events on state changes (not periodic polling)
+2. **API-side:** ✅ Smart rate limiting with periodic cleanup
+3. **Frontend:** ✅ Real-time state from MQTT, DB only for history charts
+4. **Cleanup:** ✅ Retains only 60 days of raw events (automatic)
 
-**Future migration path:** Option 2 (Workers KV) when scaling beyond ~100 active devices.
+**Future migration path:** Option 2 (Workers KV) if scaling beyond ~100 active devices with high-frequency updates.
 
-## Implementation Notes
+## Implementation Details
 
-For now, the existing `/api/event` and `/api/history` endpoints will:
-- Support both API key (legacy) and JWT (multi-tenant) authentication
-- Validate device_id against user's registered device when using JWT
-- Continue writing to D1 `events` table
+Current `/api/event` and `/api/history` endpoints:
+- ✅ Support both API key (development) and JWT (multi-user) authentication
+- ✅ Validate device_id against user's registered device when using JWT
+- ✅ Write to D1 `events` table with automatic cleanup
 - Monitor D1 usage and migrate to KV if needed
 
-## Multi-Tenant Event Isolation
+## Multi-User Event Isolation
 
-When using JWT authentication:
-- User can only write events for their registered device_id
-- User can only read history for their registered device_id
-- API validates device_id matches user's account
+JWT authentication enforces:
+- ✅ User can only write events for their registered device_id
+- ✅ User can only read history for their registered device_id
+- ✅ API validates device_id ownership via user account
 
 This prevents users from accessing other users' data even if they know the device_id.

@@ -1,4 +1,4 @@
--- Create users table for multi-tenant authentication
+-- Create users table for multi-user authentication
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,

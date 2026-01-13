@@ -67,7 +67,7 @@ const AppModule = (() => {
       pass: window.APP_CONFIG.MQTT_PASS
     };
     
-    /* PHASE 2: Multi-user authentication (implement when scaling to multiple users)
+    /* OPTIONAL: Multi-user authentication (uncomment to enable user login)
      * 
      * Example Implementation:
      * 
@@ -204,7 +204,7 @@ const AppModule = (() => {
     disconnectUI();
 
     // Hide login card in single-user mode (PHASE 1)
-    // In PHASE 2 (multi-user), remove this to show login UI
+    // For multi-user mode, remove this to show login UI
     if (elements.loginCard) {
       elements.loginCard.style.display = 'none';
     }

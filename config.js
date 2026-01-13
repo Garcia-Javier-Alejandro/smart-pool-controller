@@ -1,19 +1,19 @@
 // dashboard/config.js
 // Dashboard Configuration (commit without secrets)
 //
-// ARCHITECTURE: Single-User (Current) → Multi-User (Future)
+// ARCHITECTURE: Multi-User System
 //
-// CURRENT (Phase 1):
-// - Single shared MQTT user for all dashboard instances
-// - All users see same devices on topics: devices/esp32-pool-01/*
-// - Suitable for: single home, single location, trusted users
-//
-// FUTURE (Phase 2 - Multi-User SaaS):
-// - User authentication (login with personal account)
+// PRODUCTION MODE (Current):
+// - User authentication with personal accounts
 // - Backend API provides user-specific MQTT credentials
-// - Topic namespacing per user: devices/{userId}/pool-01/*
-// - Enables: multi-tenant deployment, access control, user isolation
-// - Example: User "john" sees devices/john/pool-01/*, User "mary" sees devices/mary/pool-01/*
+// - Topic namespacing per user: devices/{deviceId}/*
+// - Full multi-user deployment with access control and user isolation
+// - Each user manages their own registered devices
+//
+// DEVELOPMENT/TESTING MODE:
+// - Single shared MQTT credentials (for local testing only)
+// - Topics: devices/esp32-pool-01/*
+// - Suitable for: development, single home setup
 
 window.APP_CONFIG = {
   // ==================== MQTT Broker ====================

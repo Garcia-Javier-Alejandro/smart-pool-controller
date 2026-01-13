@@ -1,8 +1,8 @@
-# Smart Pool Controller (Multi-Tenant)
+# Smart Pool Controller (Multi-User)
 
-Multi-tenant pool controller stack: Cloudflare Pages (SPA) + Cloudflare Pages Functions + D1 database + ESP32 firmware + HiveMQ MQTT. Users authenticate, receive per-user MQTT credentials and topic namespaces, and control one or more ESP32 pool controllers through the web dashboard.
+Multi-user pool controller stack: Cloudflare Pages (SPA) + Cloudflare Pages Functions + D1 database + ESP32 firmware + HiveMQ MQTT. Users authenticate, receive per-user MQTT credentials and topic namespaces, and control one or more ESP32 pool controllers through the web dashboard.
 
-**Status**: ✅ Production-ready multi-tenant baseline  
+**Status**: ✅ Production-ready multi-user system  
 **Last Updated**: January 9, 2026  
 **License**: CC BY-NC 4.0 (non-commercial use)
 
@@ -12,7 +12,7 @@ Multi-tenant pool controller stack: Cloudflare Pages (SPA) + Cloudflare Pages Fu
 
 - Frontend SPA (index.html, app.js, styles.css, _redirects) served by Cloudflare Pages
 - Auth + device APIs via Cloudflare Pages Functions
-- D1 database schema (users, mqtt_credentials, devices, sessions) for multi-tenant isolation
+- D1 database schema (users, mqtt_credentials, devices, sessions) for multi-user isolation
 - MQTT broker integration (tested with HiveMQ Cloud) with per-user credentials and topic prefixes
 - ESP32 firmware (PlatformIO) for pump/valve control, temperature sensing, timer/program logic
 - CC BY-NC 4.0 license (non-commercial)
@@ -29,12 +29,12 @@ Multi-tenant pool controller stack: Cloudflare Pages (SPA) + Cloudflare Pages Fu
   - [functions/api/auth/mqtt-credentials.js](functions/api/auth/mqtt-credentials.js)
   - [functions/api/event.js](functions/api/event.js)
   - [functions/api/history.js](functions/api/history.js)
-- **Auth core**: [functions/_shared/multitenantAuth.js](functions/_shared/multitenantAuth.js), [functions/_shared/auth.js](functions/_shared/auth.js)
+- **Auth core**: [functions/_shared/multiUserAuth.js](functions/_shared/multiUserAuth.js), [functions/_shared/auth.js](functions/_shared/auth.js)
 - **Database (D1)**: migrations for users, mqtt_credentials, devices, sessions in [migrations](migrations)
 - **MQTT**: Per-user credentials + topic namespace; broker: HiveMQ Cloud (or compatible)
 - **Firmware**: PlatformIO project in [firmware](firmware) (GPIO control, MQTT client, timers, DS18B20)
 
-Data flow (multi-tenant):
+Data flow (multi-user):
 1) User registers/logs in → receives JWT
 2) Dashboard calls `/api/auth/mqtt-credentials` → gets mqttUser, mqttPass, topicPrefix, broker URL
 3) Dashboard connects to MQTT over WSS using those credentials
@@ -43,27 +43,17 @@ Data flow (multi-tenant):
 
 ---
 
-## 🚀 Quickstart (Multi-Tenant)
+## 🚀 Quickstart (Multi-User)
 
-**Prereqs**: Node 18+, `npm i -g wrangler`, Cloudflare account, MQTT broker (HiveMQ Cloud recommended).
+**Prereqs**: Node 18+, `wrangler` CLI, Cloudflare account, MQTT broker.
 
-1) Clone: `git clone https://github.com/Garcia-Javier-Alejandro/smart-pool-controller`
-2) D1 database:
-   - `wrangler d1 create smart-pool-controller-db`
-   - Update `database_id` in [wrangler.toml](wrangler.toml)
-   - Run migrations:
-     - Local: `npm run db:migrate:local`
-     - Remote: `npm run db:migrate:remote`
-3) Secrets (required/optional):
-   - `wrangler secret put JWT_SECRET`
-   - `wrangler secret put API_KEY` (optional API-key auth)
-   - `wrangler secret put HIVEMQ_API_TOKEN` (optional)
-   - `wrangler secret put MQTT_BROKER_URL` (optional override)
-4) Develop: `npm run dev` (Pages + Functions locally)
+1) Clone the repo
+2) Create the D1 database and run migrations
+3) Set required secrets (JWT, broker URL, etc.)
+4) Run locally: `npm run dev`
 5) Deploy: `npm run deploy`
-   - Cloudflare Pages settings: Framework preset **None**, Build command **(empty)**, Output directory **/**, Root **/**
-   - `_redirects` already present for SPA routing
-6) Dashboard flow: Login → call `mqtt-credentials` → connect to MQTT → control devices
+
+Detailed steps and troubleshooting: see [docs/SETUP.md](docs/SETUP.md).
 
 ---
 
@@ -146,13 +136,22 @@ Align `deviceId`/topic prefix in firmware config with the prefix returned by the
 
 ## 📂 Key Files
 
-- Frontend: [index.html](index.html), [app.js](app.js), [styles.css](styles.css), [_redirects](_redirects)
+- Frontend: [index.html](index.html), [app.js](app.js), [css/styles.css](css/styles.css), [_redirects](_redirects)
 - Backend functions: [functions/api](functions/api)
 - Auth core: [functions/_shared](functions/_shared)
 - Firmware: [firmware/src/main.cpp](firmware/src/main.cpp), [firmware/include/config.h](firmware/include/config.h)
 - Database: [migrations](migrations)
 - Config: [wrangler.toml](wrangler.toml), [package.json](package.json)
 - License: [LICENSE](LICENSE) (CC BY-NC 4.0)
+
+---
+
+## 📚 Docs
+
+- Setup Guide: [docs/SETUP.md](docs/SETUP.md)
+- Device Provisioning: [docs/DEVICE_PROVISIONING.md](docs/DEVICE_PROVISIONING.md)
+- Telemetry Strategy: [docs/TELEMETRY_STRATEGY.md](docs/TELEMETRY_STRATEGY.md)
+- Wiring Diagram: [WIRING_DIAGRAM.md](WIRING_DIAGRAM.md)
 
 ---
 
