@@ -942,33 +942,51 @@ void loop() {
   if (isBLEProvisioningActive()) {
     // Give BLE stack time to process events (writes, notifications, etc.)
     delay(10);
-    
+
+    // Handle non-blocking WiFi scan for BLE dashboard
+    if (pendingScanRequest && pScanStatusCharacteristic) {
+      scanStatus = "scanning";
+      pScanStatusCharacteristic->setValue("scanning");
+      pScanStatusCharacteristic->notify();
+
+      String json = scanWiFiNetworks();
+      lastScanResults = json;
+      scanStatus = "done";
+      pScanStatusCharacteristic->setValue("done");
+      pScanStatusCharacteristic->notify();
+      if (pNetworksCharacteristic) {
+        pNetworksCharacteristic->setValue((uint8_t*)json.c_str(), json.length());
+        pNetworksCharacteristic->notify();
+      }
+      pendingScanRequest = false;
+    }
+
     if (millis() - lastBLECheck > BLE_CHECK_INTERVAL) {
       lastBLECheck = millis();
-      
+
       if (hasNewWiFiCredentials()) {
         char ssid[33];
         char password[64];
-        
+
         if (getBLEWiFiSSID(ssid) && getBLEWiFiPassword(password)) {
           Serial.println("[BLE] ✓ Credentials received from dashboard");
-          
+
           // Stop BLE to free resources (~30-50KB RAM, CPU cycles)
           // Dashboard can use MQTT to clear credentials remotely
           stopBLEProvisioning();
-          
+
           // Try to connect with BLE credentials
           if (connectWiFi(ssid, password)) {
             // Save to NVS for future boots
             saveWiFiCredentials(ssid, password);
             clearBLECredentials();
-            
+
             // Complete system initialization
             Serial.println("[System] Completing initialization...");
             syncTimeNTP();
             setupMqtt();
             connectMqtt();
-            
+
             Serial.println("========================================");
             Serial.println("   Sistema listo (via BLE)");
             Serial.println("========================================");
@@ -981,7 +999,7 @@ void loop() {
         }
       }
     }
-    
+
     // If BLE is running, skip normal operations (WiFi reconnection, MQTT, etc.)
     return;
   }

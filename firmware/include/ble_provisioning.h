@@ -19,6 +19,11 @@
 
 #include <Arduino.h>
 
+// New: Expose scan state for main loop
+extern bool pendingScanRequest;
+extern String scanStatus;
+extern String lastScanResults;
+
 /**
  * Initialize BLE provisioning service
  * Starts BLE advertising with device name "ESP32-Pool-XXXX" (XXXX = last 4 MAC digits)

@@ -27,12 +27,20 @@ static NimBLECharacteristic* pNetworksCharacteristic = nullptr;
 static NimBLECharacteristic* pCommandCharacteristic = nullptr;
 
 // ==================== State Variables ====================
+
+// BLE/WiFi provisioning state variables
 static bool bleActive = false;
 static bool newCredentialsReceived = false;
 static String receivedSSID = "";
 static String receivedPassword = "";
 static bool deviceConnected = false;
 static bool clearWiFiRequested = false;
+
+// New: WiFi scan state for non-blocking scan
+static bool pendingScanRequest = false;
+static String scanStatus = "idle"; // "idle", "scanning", "done", "error"
+static String lastScanResults = "[]";
+static NimBLECharacteristic* pScanStatusCharacteristic = nullptr;
 
 // ==================== BLE Callbacks ====================
 
@@ -104,16 +112,11 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
       }
     }
     else if (uuid == NETWORKS_CHAR_UUID) {
-      // Trigger WiFi scan when client writes to networks characteristic
-      Serial.println("[BLE] Networks scan triggered via write");
-      String json = scanWiFiNetworks();
-      
-      // Update the characteristic with scan results
-      pCharacteristic->setValue((uint8_t*)json.c_str(), json.length());
-      Serial.print("[BLE] Networks characteristic updated, length: ");
-      Serial.println(json.length());
-      
-      // Notify client that new data is available
+      else if (uuid == NETWORKS_CHAR_UUID) {
+        // Defer WiFi scan to main loop for non-blocking operation
+        Serial.println("[BLE] Networks scan requested (deferred)");
+        pendingScanRequest = true;
+        scanStatus = "pending";
       pCharacteristic->notify();
     }
     else if (uuid == COMMAND_CHAR_UUID) {
@@ -191,6 +194,7 @@ void initBLEProvisioning() {
   );
   pStatusCharacteristic->setValue("waiting");
   
+
   // Create Networks Characteristic (Read/Write - write triggers scan, read returns JSON)
   pNetworksCharacteristic = pService->createCharacteristic(
     NETWORKS_CHAR_UUID,
@@ -198,6 +202,15 @@ void initBLEProvisioning() {
   );
   pNetworksCharacteristic->setCallbacks(new CharacteristicCallbacks());
   pNetworksCharacteristic->setValue("[]"); // Initial empty list
+
+  // Create Scan Status Characteristic (Read/Notify)
+  // Use a new UUID for scan status characteristic
+  #define SCAN_STATUS_CHAR_UUID "b7e1a1c2-8f8e-4e2a-9b1a-2e3b4c5d6e7f"
+  pScanStatusCharacteristic = pService->createCharacteristic(
+    SCAN_STATUS_CHAR_UUID,
+    NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
+  );
+  pScanStatusCharacteristic->setValue("idle");
 
   // Create Command Characteristic (Write to request actions like clearing WiFi)
   pCommandCharacteristic = pService->createCharacteristic(
@@ -242,6 +255,7 @@ void stopBLEProvisioning() {
   bleActive = false;
   deviceConnected = false;
   pServer = nullptr;
+  pScanStatusCharacteristic = nullptr;
   
   Serial.println("[BLE] ✓ Provisioning stopped");
 }
@@ -283,15 +297,19 @@ void clearBLECredentials() {
 String scanWiFiNetworks() {
   Serial.println("[BLE] Scanning WiFi networks...");
   
-  // Ensure WiFi is in station mode for scanning (required for BLE coexistence)
+  // Properly reset WiFi driver state for BLE coexistence
+  WiFi.mode(WIFI_OFF);
+  delay(100);
   WiFi.mode(WIFI_STA);
-  delay(100); // Give WiFi radio time to initialize
+  delay(200); // Give WiFi radio time to initialize after BLE is active
   
   // Perform WiFi scan
   int numNetworks = WiFi.scanNetworks();
   
   if (numNetworks == 0 || numNetworks == -1) {
     Serial.println("[BLE] No networks found or scan failed");
+    Serial.print("[BLE] WiFi status code: ");
+    Serial.println(WiFi.status());
     return "[]";
   }
   

@@ -1,3 +1,48 @@
+  /**
+   * Scan for available WiFi networks via BLE
+   * Triggers scan, waits for scan to complete, and returns network list
+   * @param {function} onProgress - Optional callback for scan progress
+   * @returns {Promise<Array>} List of networks
+   */
+  async scanNetworks(onProgress) {
+    if (!this.networksCharacteristic || !this.scanStatusCharacteristic) {
+      throw new Error('Scan not supported on this device.');
+    }
+
+    // Clear previous results (do not persist)
+    if (onProgress) onProgress('Clearing previous network list...');
+    // Optionally, clear UI here
+
+    // Write to networks characteristic to trigger scan
+    if (onProgress) onProgress('Requesting WiFi scan...');
+    await this.networksCharacteristic.writeValue(new Uint8Array([0]));
+
+    // Wait for scan status to become 'done'
+    let status = '';
+    let maxWait = 10000; // 10s timeout
+    let start = Date.now();
+    while (Date.now() - start < maxWait) {
+      const value = await this.scanStatusCharacteristic.readValue();
+      status = new TextDecoder().decode(value);
+      if (onProgress) onProgress(`Scan status: ${status}`);
+      if (status === 'done') break;
+      if (status === 'error') throw new Error('WiFi scan failed');
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    if (status !== 'done') throw new Error('WiFi scan timed out');
+
+    // Read network list
+    const netValue = await this.networksCharacteristic.readValue();
+    const json = new TextDecoder().decode(netValue);
+    let networks = [];
+    try {
+      networks = JSON.parse(json);
+    } catch (e) {
+      throw new Error('Failed to parse network list');
+    }
+    if (onProgress) onProgress('Scan complete');
+    return networks;
+  },
 /**
  * ESP32 Pool Controller - BLE Provisioning Module
  * Web Bluetooth API integration for WiFi credential provisioning
@@ -15,7 +60,8 @@ const ESP32BLEProvisioning = {
   PASSWORD_CHAR_UUID: 'cba1d466-344c-4be3-ab3f-189f80dd7518',
   STATUS_CHAR_UUID: '8d8218b6-97bc-4527-a8db-13094ac06b1d',
   NETWORKS_CHAR_UUID: 'fa87c0d0-afac-11de-8a39-0800200c9a66',
-  COMMAND_CHAR_UUID: '0b9f1e80-0f88-4b68-9a09-9d1d6921d0d8',
+  COMMAND_CHAR_UUID: '8b9d68c4-57b8-4b02-bf19-6fd94b62f709',
+  SCAN_STATUS_CHAR_UUID: 'b7e1a1c2-8f8e-4e2a-9b1a-2e3b4c5d6e7f',
 
   // State
   device: null,
@@ -26,6 +72,7 @@ const ESP32BLEProvisioning = {
   statusCharacteristic: null,
   networksCharacteristic: null,
   commandCharacteristic: null,
+  scanStatusCharacteristic: null,
 
   /**
    * Check if Web Bluetooth is supported
@@ -72,6 +119,7 @@ const ESP32BLEProvisioning = {
       this.service = await this.server.getPrimaryService(this.SERVICE_UUID);
       console.log('[BLE] ✓ Got provisioning service');
 
+
       // Get characteristics
       this.ssidCharacteristic = await this.service.getCharacteristic(this.SSID_CHAR_UUID);
       this.passwordCharacteristic = await this.service.getCharacteristic(this.PASSWORD_CHAR_UUID);
@@ -87,6 +135,21 @@ const ESP32BLEProvisioning = {
         this.commandCharacteristic = await this.service.getCharacteristic(this.COMMAND_CHAR_UUID);
       } catch (err) {
         console.warn('[BLE] Command characteristic not found; remote commands like clear_wifi will be disabled', err);
+      }
+
+      try {
+        this.scanStatusCharacteristic = await this.service.getCharacteristic(this.SCAN_STATUS_CHAR_UUID);
+        await this.scanStatusCharacteristic.startNotifications();
+        this.scanStatusCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const value = new TextDecoder().decode(event.target.value);
+          console.log(`[BLE] Scan status update: ${value}`);
+          // Optionally, update UI here to show scan progress
+          if (typeof window !== 'undefined' && window.updateScanStatus) {
+            window.updateScanStatus(value);
+          }
+        });
+      } catch (err) {
+        console.warn('[BLE] Scan status characteristic not found; scan progress will not be shown', err);
       }
 
       console.log('[BLE] ✓ Got all characteristics');
@@ -173,31 +236,42 @@ const ESP32BLEProvisioning = {
   async provision(ssid, password, callbacks = {}) {
     const { onProgress, onSuccess, onError } = callbacks;
 
-    try {
-      // Step 1: Connect to device
-      if (onProgress) onProgress('Scanning for ESP32 devices...');
-      await this.connect();
+    let attempt = 0;
+    let delayMs = 500;
+    while (attempt < 3) {
+      try {
+        attempt++;
+        // Step 1: Connect to device
+        if (onProgress) onProgress(`Scanning for ESP32 devices... (Attempt ${attempt})`);
+        await this.connect();
 
-      // Step 2: Send credentials
-      if (onProgress) onProgress('Sending WiFi credentials...');
-      await this.sendCredentials(ssid, password);
+        // Step 2: Send credentials
+        if (onProgress) onProgress('Sending WiFi credentials...');
+        await this.sendCredentials(ssid, password);
 
-      // Step 3: Wait a moment for ESP32 to process
-      if (onProgress) onProgress('ESP32 connecting to WiFi...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
+        // Step 3: Wait a moment for ESP32 to process
+        if (onProgress) onProgress('ESP32 connecting to WiFi...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Step 4: Disconnect
-      this.disconnect();
+        // Step 4: Disconnect
+        this.disconnect();
 
-      if (onProgress) onProgress('Provisioning complete!');
-      if (onSuccess) onSuccess();
+        if (onProgress) onProgress('Provisioning complete!');
+        if (onSuccess) onSuccess();
 
-      console.log('[BLE] ✓ Provisioning completed successfully');
-    } catch (error) {
-      console.error('[BLE] Provisioning failed:', error);
-      this.disconnect();
-      if (onError) onError(error);
-      throw error;
+        console.log('[BLE] ✓ Provisioning completed successfully');
+        return;
+      } catch (error) {
+        console.error(`[BLE] Provisioning attempt ${attempt} failed:`, error);
+        this.disconnect();
+        if (attempt >= 3) {
+          if (onError) onError(error);
+          throw error;
+        }
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        delayMs *= 2;
+      }
     }
   },
 
