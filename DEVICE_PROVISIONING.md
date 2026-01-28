@@ -84,7 +84,7 @@ BLE (Bluetooth Low Energy) allows you to provision WiFi credentials without swit
 | Password | `cba1d466-344c-4be3-ab3f-189f80dd7518` | Write | Send network password |
 | Networks | `fa87c0d0-afac-11de-8a39-0800200c9a66` | Read | Receive available networks (JSON) |
 | Status | `8d8218b6-97bc-4527-a8db-13094ac06b1d` | Read/Notify | Get provisioning status |
-| Command | `0b9f1e80-0f88-4b68-9a09-9d1d6921d0d8` | Write | Send special commands |
+| Command | `8b9d68c4-57b8-4b02-bf19-6fd94b62f709` | Write | Send special commands |
 
 ### BLE Troubleshooting
 

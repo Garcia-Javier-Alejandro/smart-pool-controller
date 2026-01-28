@@ -88,9 +88,40 @@ BLE (Bluetooth Low Energy) allows you to provision WiFi credentials without swit
 | Password | `cba1d466-344c-4be3-ab3f-189f80dd7518` | Write | Send network password |
 | Networks | `fa87c0d0-afac-11de-8a39-0800200c9a66` | Read | Receive available networks (JSON) |
 | Status | `8d8218b6-97bc-4527-a8db-13094ac06b1d` | Read/Notify | Get provisioning status |
-| Command | `0b9f1e80-0f88-4b68-9a09-9d1d6921d0d8` | Write | Send special commands |
+| Command | `8b9d68c4-57b8-4b02-bf19-6fd94b62f709` | Write | Send special commands (e.g., `clear_wifi`) |
 
-### BLE Troubleshooting
+
+### BLE Status Values
+
+The ESP32 publishes its provisioning state via the Status characteristic:
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| `waiting` | Device idle, BLE advertising | None - device ready |
+| `connected` | BLE client connected | Status characteristic subscribed |
+| `ssid_received` | SSID written successfully | Waiting for password |
+| `password_received` | Password written successfully | Attempting WiFi connection |
+| `credentials_ready` | Both credentials received, connecting to WiFi | Monitor for `connected` or error |
+| `clear_wifi_requested` | Clear WiFi command received | Device will restart |
+
+### BLE Retry Mechanism (v2.0+)
+
+The provisioning flow includes automatic retry with exponential backoff:
+
+- **Retry Attempts:** 3 attempts for sending credentials
+- **Backoff Strategy:** 500ms → 1000ms → 2000ms between attempts
+- **Why Needed:** BLE/WiFi coexistence on ESP32 can cause transient failures during mode transitions
+
+This automatic retry prevents provisioning failures from temporary radio contention.
+
+---
+### Implementation Notes (Timing Constants)
+
+- **Write sequence:** SSID first, then password (**100ms apart**)
+- **Retry logic:** Up to 3 attempts with exponential backoff (**500ms, 1s, 2s**)
+- **100ms** is used for the delay between writing SSID and password (not for retry/backoff)
+- **500ms** is the initial backoff for retrying BLE writes (should not be 100ms)
+
 
 #### Device doesn't appear in device picker
 
