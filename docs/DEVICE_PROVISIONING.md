@@ -15,7 +15,7 @@ This guide covers WiFi provisioning for the ESP32 Pool Controller using two meth
 
 ---
 
-## 🔵 Method 1: BLE Provisioning (Recommended for Android/Windows/macOS)
+## Method 1: BLE Provisioning (Recommended for Android/Windows/macOS)
 
 ### How It Works
 
@@ -23,9 +23,9 @@ BLE (Bluetooth Low Energy) allows you to provision WiFi credentials without swit
 
 ### Prerequisites
 
-✅ Chrome, Edge, or Opera browser (Web Bluetooth API support required)
-✅ Bluetooth capability on your device
-✅ WiFi network and credentials available
+- Chrome, Edge, or Opera browser (Web Bluetooth API support required)
+- Bluetooth capability on your device
+- WiFi network and credentials available
 
 ### First Time Setup
 
@@ -108,29 +108,29 @@ The ESP32 publishes its provisioning state via the Status characteristic:
 
 The provisioning flow includes automatic retry with exponential backoff:
 
-- **Retry Attempts:** 3 attempts for sending credentials
-- **Backoff Strategy:** 500ms → 1000ms → 2000ms between attempts
-- **Why Needed:** BLE/WiFi coexistence on ESP32 can cause transient failures during mode transitions
+- Retry Attempts: 3 attempts for sending credentials
+- Backoff Strategy: 500ms → 1000ms → 2000ms between attempts
+- Why Needed: BLE/WiFi coexistence on ESP32 can cause transient failures during mode transitions
 
 This automatic retry prevents provisioning failures from temporary radio contention.
 
 ---
 ### Implementation Notes (Timing Constants)
 
-- **Write sequence:** SSID first, then password (**100ms apart**)
-- **Retry logic:** Up to 3 attempts with exponential backoff (**500ms, 1s, 2s**)
-- **100ms** is used for the delay between writing SSID and password (not for retry/backoff)
-- **500ms** is the initial backoff for retrying BLE writes (should not be 100ms)
+- Write sequence: SSID first, then password (100ms apart)
+- Retry logic: Up to 3 attempts with exponential backoff (500ms, 1s, 2s)
+- 100ms is used for the delay between writing SSID and password (not for retry/backoff)
+- 500ms is the initial backoff for retrying BLE writes (should not be 100ms)
 
 
 #### Device doesn't appear in device picker
 
 **Checklist:**
-1. ✓ Bluetooth is enabled on your device
-2. ✓ Browser is Chrome, Edge, or Opera (Safari/Firefox don't support Web Bluetooth)
-3. ✓ ESP32 is powered on
-4. ✓ ESP32 has NO saved WiFi credentials (check serial monitor for `[BLE] Advertising`)
-5. ✓ You're within Bluetooth range (~10-30 meters / 33-100 feet)
+1. Bluetooth is enabled on your device
+2. Browser is Chrome, Edge, or Opera (Safari/Firefox don't support Web Bluetooth)
+3. ESP32 is powered on
+4. ESP32 has NO saved WiFi credentials (check serial monitor for `[BLE] Advertising`)
+5. You're within Bluetooth range (~10-30 meters / 33-100 feet)
 
 **Solutions:**
 - Move closer to the ESP32
@@ -150,10 +150,10 @@ This automatic retry prevents provisioning failures from temporary radio content
 
 #### WiFi connection fails after sending credentials
 
-1. **Verify password is correct** (case-sensitive)
-2. **Check SSID spelling** (spaces and special characters matter)
-3. **Check ESP32 is in range** of the WiFi network
-4. **Try entering SSID manually** instead of selecting from list
+1. Verify password is correct (case-sensitive)
+2. Check SSID spelling (spaces and special characters matter)
+3. Check ESP32 is in range of the WiFi network
+4. Try entering SSID manually instead of selecting from list
 5. Check serial monitor: `[WiFi] Connection failed: <reason>`
 
 #### BLE connection drops frequently
@@ -165,7 +165,7 @@ This automatic retry prevents provisioning failures from temporary radio content
 
 ---
 
-## 🌐 Method 2: WiFiManager Captive Portal (iOS, Any Device)
+## Method 2: WiFiManager Captive Portal (iOS, Any Device)
 
 ### How It Works
 
@@ -173,8 +173,8 @@ The ESP32 creates a temporary WiFi hotspot that automatically opens a web portal
 
 ### Prerequisites
 
-✅ Any device with WiFi and a web browser
-✅ WiFi credentials available
+- Any device with WiFi and a web browser
+- WiFi credentials available
 
 ### First Time Setup
 
@@ -273,7 +273,7 @@ The ESP32 creates a temporary WiFi hotspot that automatically opens a web portal
 
 ---
 
-## 🔄 Switching Between Methods
+## Switching Between Methods
 
 ### From BLE to Captive Portal (iOS users)
 
@@ -298,49 +298,49 @@ If you want to switch back to BLE provisioning:
 
 ---
 
-## 🔐 Security Considerations
+## Security Considerations
 
 ### BLE Method
 
-✅ **No Network Switching Required** - Stay on your regular WiFi while provisioning  
-✅ **Encrypted Communication** - Web Bluetooth uses TLS encryption  
-✅ **Credentials Never Over HTTP** - Sent via encrypted BLE only  
-✅ **Auto-Disable After Setup** - BLE stops after WiFi connects, reducing attack surface  
-✅ **Proximity-Based** - Only devices within ~30 meters can connect  
+- No Network Switching Required - Stay on your regular WiFi while provisioning  
+- Encrypted Communication - Web Bluetooth uses TLS encryption  
+- Credentials Never Over HTTP - Sent via encrypted BLE only  
+- Auto-Disable After Setup - BLE stops after WiFi connects, reducing attack surface  
+- Proximity-Based - Only devices within ~30 meters can connect  
 
-⚠️ **No Authentication** - Any nearby device can attempt BLE connection  
-⚠️ **Visual Access** - Attacker could see SSID/password if watching you  
+- No Authentication - Any nearby device can attempt BLE connection  
+- Visual Access - Attacker could see SSID/password if watching you  
 
 ### Captive Portal Method
 
-✅ **Works on Any Device** - No special browser required  
-✅ **Quick Setup** - No scanning or app installation needed  
+- Works on Any Device - No special browser required  
+- Quick Setup - No scanning or app installation needed  
 
-⚠️ **Open Network** - `ESP32-Pool-Setup` has no password  
-⚠️ **Plain HTTP** - Credentials sent unencrypted (but only on isolated hotspot)  
-⚠️ **Temporary** - Portal closes after WiFi connection, so time-window is limited  
+- Open Network - `ESP32-Pool-Setup` has no password  
+- Plain HTTP - Credentials sent unencrypted (but only on isolated hotspot)  
+- Temporary - Portal closes after WiFi connection, so time-window is limited  
 
 ### Best Practices for Both Methods
 
-1. **Use Strong WiFi Passwords** (8+ characters, mix of upper/lower/numbers)
-2. **Keep BLE Updated** - Use latest browser version
-3. **Setup in Private Location** - Avoid public WiFi areas during provisioning
-4. **Verify ESP32 Identity** - Device name `ESP32-Pool-XXXX` matches your device
-5. **Check Passwords Carefully** - No auto-correct for passwords
+1. Use Strong WiFi Passwords (8+ characters, mix of upper/lower/numbers)
+2. Keep BLE Updated - Use latest browser version
+3. Setup in Private Location - Avoid public WiFi areas during provisioning
+4. Verify ESP32 Identity - Device name `ESP32-Pool-XXXX` matches your device
+5. Check Passwords Carefully - No auto-correct for passwords
 
 ---
 
-## 📱 Browser Compatibility
+## Browser Compatibility
 
 ### BLE Provisioning Compatibility
 
 | Browser | Desktop | Android | iOS |
 |---------|---------|---------|-----|
-| **Chrome** | ✅ Working | ✅ Working | ❌ Not Supported |
-| **Edge** | ✅ Working | ✅ Working | ❌ Not Supported |
-| **Opera** | ✅ Working | ✅ Working | ❌ Not Supported |
-| **Safari** | ❌ No Web Bluetooth | ❌ No Web Bluetooth | ❌ No Web Bluetooth |
-| **Firefox** | ❌ Disabled | ❌ Disabled | ❌ Not Supported |
+| Chrome | Working | Working | Not Supported |
+| Edge | Working | Working | Not Supported |
+| Opera | Working | Working | Not Supported |
+| Safari | No Web Bluetooth | No Web Bluetooth | No Web Bluetooth |
+| Firefox | Disabled | Disabled | Not Supported |
 
 **Recommendation:** Use Chrome for best compatibility across all platforms
 
@@ -348,9 +348,9 @@ If you want to switch back to BLE provisioning:
 
 | Browser | Works? | Notes |
 |---------|--------|-------|
-| **Any HTTP-capable browser** | ✅ Yes | Chrome, Safari, Firefox, Edge, all work |
-| **Mobile browsers** | ✅ Yes | Automatic portal detection on most devices |
-| **HTTPS-enforcing browsers** | ⚠️ Mostly | May require manual navigation to `http://192.168.4.1` |
+| Any HTTP-capable browser | Yes | Chrome, Safari, Firefox, Edge, all work |
+| Mobile browsers | Yes | Automatic portal detection on most devices |
+| HTTPS-enforcing browsers | Mostly | May require manual navigation to `http://192.168.4.1` |
 
 **Recommendation:** Captive portal is most universal for mobile devices
 
@@ -363,18 +363,18 @@ The ESP32 is designed to automatically recover from power failures without needi
 ### Automatic Reconnection After Power Failure
 
 **What happens:**
-1. **ESP32 boots** and loads saved WiFi credentials from non-volatile storage (NVS)
-2. **Attempts connection** with **5 retry attempts** (15 seconds timeout each)
-3. **Waits 5 seconds** between retry attempts
-4. **Keeps credentials** even if connection fails (router may still be booting)
-5. **Continues retrying** every 10 seconds in the background
+1. ESP32 boots and loads saved WiFi credentials from non-volatile storage (NVS)
+2. Attempts connection with 5 retry attempts (15 seconds timeout each)
+3. Waits 5 seconds between retry attempts
+4. Keeps credentials even if connection fails (router may still be booting)
+5. Continues retrying every 10 seconds in the background
 
 **Key Features:**
-- ✅ **Credentials preserved** - Never automatically deleted
-- ✅ **Multiple retries** - Up to 5 attempts on boot
-- ✅ **Background reconnection** - Continues trying every 10 seconds
-- ✅ **MQTT auto-recovery** - Reconnects to broker after WiFi recovery
-- ✅ **No user intervention** - Fully automatic recovery
+- Credentials preserved - Never automatically deleted
+- Multiple retries - Up to 5 attempts on boot
+- Background reconnection - Continues trying every 10 seconds
+- MQTT auto-recovery - Reconnects to broker after WiFi recovery
+- No user intervention - Fully automatic recovery
 
 **Typical Power Failure Scenario:**
 ```
@@ -396,51 +396,51 @@ Total recovery time: 1-2 minutes (automatic)
 
 ## Which Method Should I Use?
 
-### Choose **BLE Provisioning** if:
-- ✅ You have an Android phone or Windows/macOS device
-- ✅ You want faster setup (~10-20 seconds total)
-- ✅ You're in a secure environment
-- ✅ You want to avoid switching WiFi networks
+### Choose BLE Provisioning if:
+- You have an Android phone or Windows/macOS device
+- You want faster setup (~10-20 seconds total)
+- You're in a secure environment
+- You want to avoid switching WiFi networks
 
-### Choose **Captive Portal** if:
-- ✅ You have an iPhone or iPad
-- ✅ You don't have Web Bluetooth support
-- ✅ You prefer a simpler, no-pairing process
-- ✅ You're already familiar with WiFi hotspot setup
+### Choose Captive Portal if:
+- You have an iPhone or iPad
+- You don't have Web Bluetooth support
+- You prefer a simpler, no-pairing process
+- You're already familiar with WiFi hotspot setup
 
-### Use **Both Methods** if:
-- ✅ You have multiple devices (Android + iPhone)
-- ✅ You want flexibility for different users
-- ✅ You need a backup if BLE fails
+### Use Both Methods if:
+- You have multiple devices (Android + iPhone)
+- You want flexibility for different users
+- You need a backup if BLE fails
 
 ---
 
-## 📊 Comparison Table
+## Comparison Table
 
 | Feature | BLE | Captive Portal |
 |---------|-----|---|
-| **Setup Speed** | ~10-20 sec | ~30-60 sec |
-| **Network Switching Required** | ❌ No | ✅ Yes (temporarily) |
-| **Browser Support** | 3 browsers | Any browser |
-| **iOS Support** | ❌ No | ✅ Yes |
-| **Encryption** | ✅ TLS | ⚠️ Isolated network |
-| **Requires Pairing** | ❌ No | ❌ No |
-| **Works Offline** | ✅ Yes | ✅ Yes |
-| **Automatic Portal** | N/A | ✅ Usually |
-| **Multi-device Provisioning** | ✅ Easy | ✅ Easy |
+| Setup Speed | ~10-20 sec | ~30-60 sec |
+| Network Switching Required | No | Yes (temporarily) |
+| Browser Support | 3 browsers | Any browser |
+| iOS Support | No | Yes |
+| Encryption | TLS | Isolated network |
+| Requires Pairing | No | No |
+| Works Offline | Yes | Yes |
+| Automatic Portal | N/A | Usually |
+| Multi-device Provisioning | Easy | Easy |
 
 ---
 
-## 🔧 Advanced Options
+## Advanced Options
 
 ### Remote WiFi Clearing (MQTT)
 
 If device is already connected to WiFi and MQTT broker:
 
 **Send MQTT Message:**
-- **Broker:** Your MQTT broker (HiveMQ, Mosquitto, etc.)
-- **Topic:** `pool/wifi/clear`
-- **Payload:** `clear`
+- Broker: Your MQTT broker (HiveMQ, Mosquitto, etc.)
+- Topic: `pool/wifi/clear`
+- Payload: `clear`
 
 **Result:**
 1. ESP32 publishes `disconnected` status
@@ -462,11 +462,11 @@ esptool.py -p COM3 erase_flash
 platformio run -t upload
 ```
 
-This erases **all** ESP32 memory including WiFi and MQTT credentials.
+This erases all ESP32 memory including WiFi and MQTT credentials.
 
 ---
 
-## 🆘 Support & Troubleshooting
+## Support & Troubleshooting
 
 ### General Checklist
 
@@ -478,15 +478,15 @@ This erases **all** ESP32 memory including WiFi and MQTT credentials.
 
 ### Still Having Issues?
 
-1. **Check serial monitor** output for error messages
-2. **Review log file** on dashboard
-3. **Restart ESP32** (power cycle)
-4. **Clear browser cache** (Ctrl+Shift+Del)
-5. **Try the alternative method** (BLE ↔ Captive Portal)
+1. Check serial monitor output for error messages
+2. Review log file on dashboard
+3. Restart ESP32 (power cycle)
+4. Clear browser cache (Ctrl+Shift+Del)
+5. Try the alternative method (BLE ↔ Captive Portal)
 
 ---
 
-## 📚 References
+## References
 
 - [Web Bluetooth API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API)
 - [ESP32 BLE API](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/index.html)

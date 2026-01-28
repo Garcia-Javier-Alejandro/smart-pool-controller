@@ -251,12 +251,12 @@ wrangler d1 execute smart-pool-controller-db --local --file=./migrations/0001_cr
 
 ## Next Steps
 
-1. ✅ Backend authentication API complete
-2. ⏳ Update dashboard to use authentication
-3. ⏳ Update ESP32 firmware to display device_id
-4. ⏳ Implement HiveMQ Cloud API integration
-5. ⏳ Migrate event API to support multi-tenant topics
-6. ⏳ Add user dashboard for device management
+1. Backend authentication API complete
+2. Update dashboard to use authentication
+3. Update ESP32 firmware to display device_id
+4. Implement HiveMQ Cloud API integration
+5. Migrate event API to support multi-tenant topics
+6. Add user dashboard for device management
 
 ## Resources
 

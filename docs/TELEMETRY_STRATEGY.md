@@ -22,13 +22,13 @@ The `/api/event` and `/api/history` endpoints use D1 database to store telemetry
 - DB history used only for charts/analytics
 
 **Pros:**
-- ✅ Minimal code changes
-- ✅ Works within Cloudflare free tier
-- ✅ Simple to maintain
+- Minimal code changes
+- Works within Cloudflare free tier
+- Simple to maintain
 
 **Cons:**
-- ⚠️ May hit D1 limits with many active users
-- ⚠️ Not suitable for high-resolution time-series data
+- May hit D1 limits with many active users
+- Not suitable for high-resolution time-series data
 
 ### Option 2: Migrate to Cloudflare Workers KV (Future)
 
@@ -59,37 +59,37 @@ The `/api/event` and `/api/history` endpoints use D1 database to store telemetry
 - Cloudflare Worker proxies requests
 
 **Pros:**
-- ✅ Best for high-frequency, high-resolution data
-- ✅ Powerful querying and aggregation
+- Best for high-frequency, high-resolution data
+- Powerful querying and aggregation
 
 **Cons:**
-- ⚠️ Additional infrastructure cost
-- ⚠️ More complex deployment
+- Additional infrastructure cost
+- More complex deployment
 
 ## Recommendation
 
 **Current implementation (already optimized):**
 
-1. **Device-side:** ✅ Only sends events on state changes (not periodic polling)
-2. **API-side:** ✅ Smart rate limiting with periodic cleanup
-3. **Frontend:** ✅ Real-time state from MQTT, DB only for history charts
-4. **Cleanup:** ✅ Retains only 60 days of raw events (automatic)
+1. **Device-side:** Only sends events on state changes (not periodic polling)
+2. **API-side:** Smart rate limiting with periodic cleanup
+3. **Frontend:** Real-time state from MQTT, DB only for history charts
+4. **Cleanup:** Retains only 60 days of raw events (automatic)
 
 **Future migration path:** Option 2 (Workers KV) if scaling beyond ~100 active devices with high-frequency updates.
 
 ## Implementation Details
 
 Current `/api/event` and `/api/history` endpoints:
-- ✅ Support both API key (development) and JWT (multi-user) authentication
-- ✅ Validate device_id against user's registered device when using JWT
-- ✅ Write to D1 `events` table with automatic cleanup
+- Support both API key (development) and JWT (multi-user) authentication
+- Validate device_id against user's registered device when using JWT
+- Write to D1 `events` table with automatic cleanup
 - Monitor D1 usage and migrate to KV if needed
 
 ## Multi-User Event Isolation
 
 JWT authentication enforces:
-- ✅ User can only write events for their registered device_id
-- ✅ User can only read history for their registered device_id
-- ✅ API validates device_id ownership via user account
+- User can only write events for their registered device_id
+- User can only read history for their registered device_id
+- API validates device_id ownership via user account
 
 This prevents users from accessing other users' data even if they know the device_id.
